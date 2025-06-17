@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // Make sure this is imported
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +9,7 @@ import '../app_state.dart';
 import '../details/comments.dart';
 import '../details/event_hall_package.dart';
 import '../details/message.dart';
-import '../service/database.dart'; // Import the DatabaseService
+import '../service/database.dart';
 
 class BookingPage extends StatefulWidget {
   final EventHallPackage eventHallPackage;
@@ -30,36 +30,89 @@ class _BookingPageState extends State<BookingPage> {
   final _formKey = GlobalKey<FormState>();
 
   User? _currentUser;
-  final DatabaseService _databaseService = DatabaseService(); // Initialize DatabaseService
+  final DatabaseService _databaseService = DatabaseService();
+
+  // Define available add-ons with their prices
+  final Map<String, double> _availableAddOns = {
+    'Catering': 1500.0,
+    'Emcee': 500.0,
+    'DJ': 800.0,
+    'Sound System': 700.0,
+    'Lighting System': 600.0,
+  };
+
+  // State to hold selected add-ons
+  final Map<String, bool> _selectedAddOns = {
+    'Catering': false,
+    'Emcee': false,
+    'DJ': false,
+    'Sound System': false,
+    'Lighting System': false,
+  };
+
+  // State variable for dynamically calculated total price
+  double _currentCalculatedTotalPrice = 0.0;
 
   @override
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    // Listen for auth state changes to keep _currentUser updated and potentially
-    // save/update user profile in Firestore
     FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (mounted) { // Check if widget is still mounted
+      if (mounted) {
         setState(() {
           _currentUser = user;
         });
         if (user != null) {
-          // Save or update user profile in Firestore when auth state changes
-          // You might want to get name/phone from user input or default values
           _databaseService.saveUser(user, user.displayName, user.phoneNumber, 'user');
         }
       }
     });
+
+    // Add listeners to text controllers to update total price dynamically
+    // _daysController listener is implicitly handled by date selection now
+    _personsController.addListener(_updateTotalPrice);
+    // Initial calculation when the page loads
+    _updateTotalPrice();
   }
 
   @override
   void dispose() {
     _startDateController.dispose();
     _endDateController.dispose();
+    // _daysController.removeListener(_updateTotalPrice); // Not needed as it's readOnly and updated via date pickers
     _daysController.dispose();
+    _personsController.removeListener(_updateTotalPrice); // Remove listener
     _personsController.dispose();
     super.dispose();
   }
+
+  // Method to calculate and update the total price
+  void _updateTotalPrice() {
+    double basePrice = widget.eventHallPackage.price;
+    // Get days from controller, which is updated by date pickers
+    int days = int.tryParse(_daysController.text) ?? 1; // Default to 1 day if not entered or calculated yet
+    int persons = int.tryParse(_personsController.text) ?? 1; // Default to 1 person if not entered
+
+    // Calculate price based on days (assuming base price is per day)
+    double packageCost = basePrice * days;
+
+    // Calculate add-on cost
+    double addOnCost = 0.0;
+    _selectedAddOns.forEach((name, isSelected) {
+      if (isSelected) {
+        addOnCost += _availableAddOns[name] ?? 0.0;
+      }
+    });
+
+    // Calculate per-person cost
+    // You can adjust the per-person rate (e.g., RM 10.0 per person)
+    double perPersonCost = persons * 10.0; 
+
+    setState(() {
+      _currentCalculatedTotalPrice = packageCost + addOnCost + perPersonCost;
+    });
+  }
+
 
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -72,6 +125,15 @@ class _BookingPageState extends State<BookingPage> {
       setState(() {
         _startDate = picked;
         _startDateController.text = DateFormat('yyyy-MM-dd').format(_startDate!);
+        // If end date is already selected, recalculate days
+        if (_endDate != null && _startDate != null && _startDate!.isBefore(_endDate!)) {
+          int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
+          _daysController.text = calculatedDays.toString();
+        } else if (_startDate != null && _endDate == null) {
+          // If only start date is selected, assume 1 day for initial calculation
+          _daysController.text = '1';
+        }
+        _updateTotalPrice(); // Update total price when dates change
       });
     }
   }
@@ -80,23 +142,28 @@ class _BookingPageState extends State<BookingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
+      firstDate: _startDate ?? DateTime.now(), // End date cannot be before start date
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _endDate) {
       setState(() {
         _endDate = picked;
         _endDateController.text = DateFormat('yyyy-MM-dd').format(_endDate!);
+        // Recalculate days and update total price
+        if (_startDate != null && _endDate != null) {
+          int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
+          _daysController.text = calculatedDays.toString(); // Update days controller
+        }
+        _updateTotalPrice(); // Update total price when dates change
       });
     }
   }
 
-  void _confirmBooking() async { // Made async to await database operations
+
+  void _confirmBooking() async {
     if (_formKey.currentState!.validate()) {
       if (_currentUser == null) {
-        // This case should ideally be handled by the UI before calling _confirmBooking
-        // but it's good to have a safeguard.
-        if (mounted) { // Guard for context
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please log in to confirm your booking!')),
           );
@@ -104,40 +171,38 @@ class _BookingPageState extends State<BookingPage> {
         return;
       }
 
-      // Calculate days if not directly entered, or ensure _daysController is populated
-      int days = int.tryParse(_daysController.text) ?? 0;
-      if (_startDate != null && _endDate != null) {
-        days = _endDate!.difference(_startDate!).inDays + 1;
-        _daysController.text = days.toString(); // Update controller with calculated value
-      }
+      // Ensure days and persons controllers are updated before final calculation
+      int days = int.tryParse(_daysController.text) ?? 1;
+      int persons = int.tryParse(_personsController.text) ?? 1;
+
 
       // Prepare booking data
       Map<String, dynamic> bookingData = {
         'userId': _currentUser!.uid,
         'eventHallPackageId': widget.eventHallPackage.id,
         'eventName': widget.eventHallPackage.name,
-        'eventPrice': widget.eventHallPackage.price,
-        'details': 'Booking for ${widget.eventHallPackage.name}', // Or allow user to input more details
-        'visitorPax': int.parse(_personsController.text),
+        'eventPrice': widget.eventHallPackage.price, // This is the base price per day/event
+        'details': 'Booking for ${widget.eventHallPackage.name}',
+        'visitorPax': persons, // Use the parsed persons value
         'startDate': _startDate != null ? Timestamp.fromDate(_startDate!) : null,
         'endDate': _endDate != null ? Timestamp.fromDate(_endDate!) : null,
-        'days': days,
-        'addOns': [], // Implement UI to select add-ons if needed
-        'totalPrice': widget.eventHallPackage.price * days, // Basic calculation, adjust based on add-ons
+        'days': days, // Use the parsed days value
+        'addOns': _selectedAddOns.keys.where((name) => _selectedAddOns[name]!).toList(),
+        'totalPrice': _currentCalculatedTotalPrice, // Use the dynamically calculated total price
         'bookingDate': FieldValue.serverTimestamp(),
-        'status': 'pending', // Initial status
+        'status': 'pending',
       };
 
       try {
         await _databaseService.addBooking(bookingData);
-        if (mounted) { // Guard for context
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Booking Confirmed and Saved!')),
           );
         }
         print('Booking confirmed and saved to Firestore!');
       } catch (e) {
-        if (mounted) { // Guard for context
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to save booking: $e')),
           );
@@ -148,12 +213,11 @@ class _BookingPageState extends State<BookingPage> {
   }
 
   Future<void> _addMessage(String message) async {
-    // ... existing message adding logic ...
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       print('User not logged in. Cannot add message.');
-      if (mounted) { // Guard for context
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please log in to add a message.')),
         );
@@ -172,8 +236,6 @@ class _BookingPageState extends State<BookingPage> {
       'sender': user.displayName ?? user.email ?? 'Anonymous',
       'timestamp': FieldValue.serverTimestamp(),
     });
-    // No need for a mounted check here if no context-dependent operations follow this await.
-    // However, if you added a success SnackBar here, you would need it.
   }
 
   @override
@@ -199,25 +261,20 @@ class _BookingPageState extends State<BookingPage> {
               ),
               const SizedBox(height: 16),
 
-
               Text(
                 widget.eventHallPackage.name,
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-
 
               Text(widget.eventHallPackage.description),
               const SizedBox(height: 8),
 
-
-              Text('Price: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'),
+              Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'), // Clarified base price label
               const SizedBox(height: 16),
 
-
               const Text(
-                'Discussion',
+                'Reviews and Discussion',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const Divider(),
@@ -250,7 +307,9 @@ class _BookingPageState extends State<BookingPage> {
                         return MessageCard(
                           message: data['message'],
                           sender: data['sender'],
-                          timestamp: data['timestamp'].toDate(),
+                          timestamp: data['timestamp'] != null
+                              ? data['timestamp'].toDate()
+                              : DateTime.now(),
                         );
                       }).toList(),
                     );
@@ -271,7 +330,29 @@ class _BookingPageState extends State<BookingPage> {
                   ),
                 ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // --- Add-ons Section ---
+              const Text(
+                'Event Add-ons',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Divider(),
+              ..._availableAddOns.keys.map((addOnName) {
+                return CheckboxListTile(
+                  title: Text('$addOnName (RM${_availableAddOns[addOnName]?.toStringAsFixed(2)})'),
+                  value: _selectedAddOns[addOnName],
+                  onChanged: (bool? newValue) {
+                    setState(() {
+                      _selectedAddOns[addOnName] = newValue!;
+                      _updateTotalPrice(); // Update total price when add-ons change
+                    });
+                  },
+                );
+              }).toList(),
+              // --- End Add-ons Section ---
+
+              const SizedBox(height: 24),
 
               const Text(
                 'Booking Details',
@@ -331,23 +412,15 @@ class _BookingPageState extends State<BookingPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _daysController,
+                            readOnly: true, // Made read-only
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: 'Days',
-                              hintText: 'e.g., 1, 2, 3',
+                              hintText: 'Calculated from dates', // Changed hint
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.timelapse),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Days';
-                              }
-                              if (int.tryParse(value) == null ||
-                                  int.parse(value) <= 0) {
-                                return 'Valid Days';
-                              }
-                              return null;
-                            },
+                            // Removed validator as it's no longer user editable
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -376,6 +449,24 @@ class _BookingPageState extends State<BookingPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // --- Dynamic Total Price Display ---
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'Estimated Total: RM${_currentCalculatedTotalPrice.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16), // Space before button
+
                     Center(
                       child: ElevatedButton.icon(
                         onPressed: appState.loggedIn
