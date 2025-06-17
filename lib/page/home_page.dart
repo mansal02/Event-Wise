@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-
 import '../component/header.dart';
 import '../component/preview_list.dart';
-import '../component/event_hall_grid.dart';
-import '../details/event_hall_packages.dart';
+import '../component/event_hall_preview.dart';
+import '../details/event_hall_packages.dart'; 
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,12 +19,12 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView( 
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            Header(size: size), 
+            Header(size: size),
             PreviewList(),
-            EventHallGrid(
+            EventHallPreview(
               eventHallPackages: eventHallPackages,
               size: size,
             ),

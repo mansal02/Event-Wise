@@ -1,4 +1,3 @@
-// drawer.dart
 import 'package:firebase_auth/firebase_auth.dart'
     hide EmailAuthProvider, PhoneAuthProvider;
 import 'package:provider/provider.dart';
@@ -34,10 +33,10 @@ class Drawerbar extends StatelessWidget {
                       color: Colors.white,
                       size: 65,
                     ),
-                    // Display username or Login button
+
                     if (appState.loggedIn && user != null)
                       Text(
-                        user.displayName ?? user.email ?? 'N/A', // Show username or email
+                        user.displayName ?? user.email ?? 'N/A', 
                         style: const TextStyle(color: Colors.white, fontSize: 16),
                       )
                     else
@@ -73,21 +72,20 @@ class Drawerbar extends StatelessWidget {
                 },
               ),
               SideBarList(
-                icon: Icons.event,
-                text: 'E V E N T S',
+                icon: Icons.calendar_today,
+                text: 'E V E N T S   H A L L',
                 onTap: () {
-                  context.go('/events');
+                  context.go('/event-hall'); 
                 },
               ),
               SideBarList(
-                icon: Icons.calendar_today,
-                text: 'B O O K I N G S',
+                icon: Icons.event_available,
+                text: 'M Y   B O O K I N G S',
                 onTap: () {
-                  context.go('/bookings');
+                  context.go('/mybookings');
                 },
               ),
               const Spacer(),
-              // Use the logout icon for logout functionality
               if (appState.loggedIn)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),

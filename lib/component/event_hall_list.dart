@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart'; 
 
-class EventHallGrid extends StatelessWidget {
-  final List<Map<String, String>> eventHallPackages;
+import '../details/event_hall_package.dart'; 
+
+class EventHallList extends StatelessWidget {
+  final List<EventHallPackage> eventHallPackages; 
   final Size size;
 
-  const EventHallGrid({
+  const EventHallList({
     super.key,
     required this.eventHallPackages,
     required this.size,
@@ -13,8 +16,7 @@ class EventHallGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gridCrossAxisCount = 1; 
-    final displayCount = eventHallPackages.length.clamp(1, 6);
+    final gridCrossAxisCount = 1;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
@@ -27,22 +29,9 @@ class EventHallGrid extends StatelessWidget {
               Text(
                 'Event Hall Packages',
                 style: GoogleFonts.lato(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w400,
                   fontSize: size.width * 0.045,
                   color: Colors.black,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // See All action
-                },
-                child: Text(
-                  'See All',
-                  style: GoogleFonts.lato(
-                    fontWeight: FontWeight.w400,
-                    fontSize: size.width * 0.035,
-                    color: Colors.blue,
-                  ),
                 ),
               ),
             ],
@@ -50,19 +39,18 @@ class EventHallGrid extends StatelessWidget {
           SizedBox(height: size.width * 0.025),
           GridView.builder(
             shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(), 
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: gridCrossAxisCount,
-              // Make the box taller by decreasing the childAspectRatio
               childAspectRatio: size.width / (size.height * 0.28),
               crossAxisSpacing: size.width * 0.04,
               mainAxisSpacing: size.width * 0.04,
             ),
-            itemCount: displayCount,
+            itemCount: eventHallPackages.length,
             itemBuilder: (context, index) {
               final package = eventHallPackages[index];
               return InkWell(
                 onTap: () {
-                  // Handle card tap here
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -90,7 +78,7 @@ class EventHallGrid extends StatelessWidget {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.asset(
-                              package['image'] ?? 'assets/images/default.png',
+                              package.image,
                               width: double.infinity,
                               height: double.infinity,
                               fit: BoxFit.cover,
@@ -107,7 +95,7 @@ class EventHallGrid extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    package['title'] ?? '',
+                                    package.title, 
                                     style: GoogleFonts.lato(
                                       fontWeight: FontWeight.bold,
                                       fontSize: size.width * 0.037,
@@ -117,7 +105,7 @@ class EventHallGrid extends StatelessWidget {
                                   ),
                                   SizedBox(height: size.height * 0.007),
                                   Text(
-                                    package['description'] ?? '',
+                                    package.description,
                                     style: GoogleFonts.lato(
                                       fontWeight: FontWeight.normal,
                                       fontSize: size.width * 0.029,
@@ -127,6 +115,15 @@ class EventHallGrid extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
+                                 
+                                  Text(
+                                    'Price: RM${package.price.toStringAsFixed(2)}/day',
+                                    style: GoogleFonts.lato(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: size.width * 0.032,
+                                      color: Colors.green[700],
+                                    ),
+                                  ),
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: SizedBox(
@@ -134,7 +131,7 @@ class EventHallGrid extends StatelessWidget {
                                       width: constraints.maxWidth < 100 ? constraints.maxWidth : 90,
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          // Book now action
+                                          context.push('/booking', extra: package); 
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color.fromARGB(255, 192, 107, 241),
