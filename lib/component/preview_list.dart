@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 class PreviewList extends StatefulWidget {
@@ -10,17 +11,12 @@ class PreviewList extends StatefulWidget {
 
 class _PreviewListState extends State<PreviewList> {
   final List<String> images = [
-    'assets/images/bhall.png',
-    'assets/images/csuite.png',
-    'assets/images/gballroom.png',
-    'assets/images/ccenter.png',
-    'assets/images/chall.png',
-    'assets/images/communitycenter.png',
-    'assets/images/park.png',
-    'assets/images/rooftop.png',
-    'assets/images/phall.png',
-    'assets/images/stadium.png',
-    'assets/images/phall.png',
+    'assets/images/BallRoomEmpty.png',
+    'assets/images/BallRoomWedding.png',  
+    'assets/images/BallRoomCorporate.png',
+    'assets/images/BallRoomParty.png',
+    'assets/images/BallRoomPersonalised.png',
+  
   ];
   final ScrollController _controller = ScrollController();
   Timer? _timer;

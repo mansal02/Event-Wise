@@ -1,42 +1,47 @@
 import 'event_hall_package.dart';
 
 final List<EventHallPackage> eventHallPackages = const [
-  EventHallPackage(
+ EventHallPackage(
     id: 'EH-a-1',
-    title: 'Grand Ballroom',
-    description: 'A spacious hall suitable for large events.',
-    image: 'assets/images/gballroom.png',
+    title: 'Empty Hall Rental',
+    description: 'A spacious ballroom with no additional services. Ideal for full customization.',
+    image: 'assets/images/BallRoomEmpty.png',
     price: 5000.0,
+    customPrice: '',
   ),
   EventHallPackage(
     id: 'EH-b-1',
-    title: 'Conference Suite',
-    description: 'Perfect for business meetings and seminars.',
-    image: 'assets/images/csuite.png',
-    price: 2000.0,
+    title: 'Wedding Package',
+    description: 'A luxurious wedding setup with decor, emcee, lighting, and seating.',
+    image: 'assets/images/BallRoomWedding.png',
+    price: 9000.0,
+    customPrice: '',
   ),
   EventHallPackage(
     id: 'EH-c-1',
-    title: 'Banquet Hall',
-    description: 'Ideal for weddings and parties.',
-    image: 'assets/images/bhall.png',
-    price: 4500.0,
+    title: 'Corporate Package',
+    description: 'Professional setup with projector, emcee, PA system, stage, and refreshments.',
+    image: 'assets/images/BallRoomCorporate.png',
+    price: 7000.0,
+    customPrice: '',
   ),
   EventHallPackage(
     id: 'EH-d-1',
-    title: 'Conference Center',
-    description: 'Modern facilities for conferences and workshops.',
-    image: 'assets/images/ccenter.png',
-    price: 3000.0,
+    title: 'Party Package',
+    description: 'Includes DJ, emcee, ambient lighting, dance floor setup, and seating arrangement.',
+    image: 'assets/images/BallRoomParty.png',
+    price: 8500.0,
+    customPrice: '',
   ),
   EventHallPackage(
     id: 'EH-e-1',
-    title: 'Community Hall',
-    description: 'Perfect for community events and gatherings.',
-    image: 'assets/images/chall.png',
-    price: 1500.0,
+    title: 'Custom Package',
+    description: 'Create your own experience with add-ons like DJ, emcee, decor, or catering.',
+    image: 'assets/images/BallRoomPersonalised.png',
+    price: 6000.0, 
+    customPrice: 'Minimum price of 6000.0 for custom packages, additional costs may apply based on selected services.',
   ),
-  EventHallPackage(
+ /* EventHallPackage(
     id: 'EH-f-1',
     title: 'Community Center',
     description: 'Versatile space for various community activities.',
@@ -70,5 +75,5 @@ final List<EventHallPackage> eventHallPackages = const [
     description: 'A versatile hall for public events.',
     image: 'assets/images/phall.png',
     price: 1800.0,
-  ),
+  ), */
 ];

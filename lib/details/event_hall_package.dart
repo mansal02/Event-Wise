@@ -4,6 +4,7 @@ class EventHallPackage {
   final String description;
   final String image;
   final double price; 
+  final String customPrice;
 
   const EventHallPackage({
     required this.id,
@@ -11,6 +12,7 @@ class EventHallPackage {
     required this.description,
     required this.image,
     required this.price,
+    required this.customPrice,
   });
 
   String get name => title;
