@@ -1,14 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Make sure this is imported
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../app_state.dart';
-import '../details/event_hall_package.dart';
 import '../details/comments.dart';
-import '../details/message.dart'; 
+import '../details/event_hall_package.dart';
+import '../details/message.dart';
+import '../service/database.dart'; // Import the DatabaseService
 
 class BookingPage extends StatefulWidget {
   final EventHallPackage eventHallPackage;
@@ -29,16 +30,24 @@ class _BookingPageState extends State<BookingPage> {
   final _formKey = GlobalKey<FormState>();
 
   User? _currentUser;
+  final DatabaseService _databaseService = DatabaseService(); // Initialize DatabaseService
 
   @override
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
+    // Listen for auth state changes to keep _currentUser updated and potentially
+    // save/update user profile in Firestore
     FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (mounted) {
+      if (mounted) { // Check if widget is still mounted
         setState(() {
           _currentUser = user;
         });
+        if (user != null) {
+          // Save or update user profile in Firestore when auth state changes
+          // You might want to get name/phone from user input or default values
+          _databaseService.saveUser(user, user.displayName, user.phoneNumber, 'user');
+        }
       }
     });
   }
@@ -82,29 +91,73 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
-  void _confirmBooking() {
+  void _confirmBooking() async { // Made async to await database operations
     if (_formKey.currentState!.validate()) {
-      print('Booking confirmed for: ${widget.eventHallPackage.name}');
-      print('Start Date: ${_startDateController.text}');
-      print('End Date: ${_endDateController.text}');
-      print('Days: ${_daysController.text}');
-      print('Persons: ${_personsController.text}');
+      if (_currentUser == null) {
+        // This case should ideally be handled by the UI before calling _confirmBooking
+        // but it's good to have a safeguard.
+        if (mounted) { // Guard for context
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please log in to confirm your booking!')),
+          );
+        }
+        return;
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking Confirmed!')),
-      );
-      // You would typically save this booking to your database here
+      // Calculate days if not directly entered, or ensure _daysController is populated
+      int days = int.tryParse(_daysController.text) ?? 0;
+      if (_startDate != null && _endDate != null) {
+        days = _endDate!.difference(_startDate!).inDays + 1;
+        _daysController.text = days.toString(); // Update controller with calculated value
+      }
+
+      // Prepare booking data
+      Map<String, dynamic> bookingData = {
+        'userId': _currentUser!.uid,
+        'eventHallPackageId': widget.eventHallPackage.id,
+        'eventName': widget.eventHallPackage.name,
+        'eventPrice': widget.eventHallPackage.price,
+        'details': 'Booking for ${widget.eventHallPackage.name}', // Or allow user to input more details
+        'visitorPax': int.parse(_personsController.text),
+        'startDate': _startDate != null ? Timestamp.fromDate(_startDate!) : null,
+        'endDate': _endDate != null ? Timestamp.fromDate(_endDate!) : null,
+        'days': days,
+        'addOns': [], // Implement UI to select add-ons if needed
+        'totalPrice': widget.eventHallPackage.price * days, // Basic calculation, adjust based on add-ons
+        'bookingDate': FieldValue.serverTimestamp(),
+        'status': 'pending', // Initial status
+      };
+
+      try {
+        await _databaseService.addBooking(bookingData);
+        if (mounted) { // Guard for context
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Booking Confirmed and Saved!')),
+          );
+        }
+        print('Booking confirmed and saved to Firestore!');
+      } catch (e) {
+        if (mounted) { // Guard for context
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save booking: $e')),
+          );
+        }
+        print('Error saving booking: $e');
+      }
     }
   }
 
   Future<void> _addMessage(String message) async {
+    // ... existing message adding logic ...
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       print('User not logged in. Cannot add message.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to add a message.')),
-      );
+      if (mounted) { // Guard for context
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to add a message.')),
+        );
+      }
       return;
     }
 
@@ -119,6 +172,8 @@ class _BookingPageState extends State<BookingPage> {
       'sender': user.displayName ?? user.email ?? 'Anonymous',
       'timestamp': FieldValue.serverTimestamp(),
     });
+    // No need for a mounted check here if no context-dependent operations follow this await.
+    // However, if you added a success SnackBar here, you would need it.
   }
 
   @override
@@ -139,7 +194,7 @@ class _BookingPageState extends State<BookingPage> {
               Image.asset(
                 widget.eventHallPackage.image,
                 width: double.infinity,
-                height: 200, 
+                height: 200,
                 fit: BoxFit.cover,
               ),
               const SizedBox(height: 16),

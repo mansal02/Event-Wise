@@ -1,7 +1,9 @@
 // profile_page.dart
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_ui_auth/firebase_ui_auth.dart'; // Ensure this is imported for ChangePasswordScreen
+
+import '../service/database.dart'; // Import the DatabaseService
 
 class CustomProfilePage extends StatefulWidget {
   const CustomProfilePage({super.key});
@@ -14,10 +16,11 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController; // Added phone controller
-  bool _isPasswordVisible = false; // For password visibility toggle
+  late TextEditingController _phoneController;
+  bool _isPasswordVisible = false;
 
-  User? _currentUser; // To hold the current user data
+  User? _currentUser;
+  final DatabaseService _databaseService = DatabaseService(); // Initialize DatabaseService
 
   @override
   void initState() {
@@ -27,6 +30,28 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
     _nameController = TextEditingController(text: _currentUser?.displayName ?? '');
     _emailController = TextEditingController(text: _currentUser?.email ?? '');
     _phoneController = TextEditingController(text: _currentUser?.phoneNumber ?? '');
+
+    // Fetch and display additional user data from Firestore if available
+    _fetchAndSetUserProfile();
+  }
+
+  Future<void> _fetchAndSetUserProfile() async {
+    if (_currentUser != null) {
+      final userDoc = await _databaseService.getUser(_currentUser!.uid);
+      if (userDoc != null && userDoc.exists) {
+        setState(() {
+          _nameController.text = userDoc.data()?['name'] ?? _currentUser?.displayName ?? '';
+          _phoneController.text = userDoc.data()?['phoneNumber'] ?? _currentUser?.phoneNumber ?? '';
+          // Email is primarily from FirebaseAuth, but can be synced from Firestore if needed
+          _emailController.text = userDoc.data()?['email'] ?? _currentUser?.email ?? '';
+        });
+      } else {
+        // If no Firestore document exists, create one with default role 'user'
+        await _databaseService.saveUser(_currentUser!, _currentUser?.displayName, _currentUser?.phoneNumber, 'user');
+        // Re-fetch to ensure controllers are updated after initial save
+        _fetchAndSetUserProfile();
+      }
+    }
   }
 
   @override
@@ -40,18 +65,25 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Update Display Name
-        if (_nameController.text != _currentUser?.displayName) {
-          await _currentUser?.updateDisplayName(_nameController.text);
+        if (_currentUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not logged in.')),
+          );
+          return;
         }
 
-        // Update Email
-        // Note: Updating email often requires re-authentication and re-verification for security.
-        // If the user's current session is old, Firebase will require a recent login.
+        Map<String, dynamic> firestoreUpdateData = {};
+
+        // Update Display Name in Firebase Auth
+        if (_nameController.text != _currentUser?.displayName) {
+          await _currentUser?.updateDisplayName(_nameController.text);
+          firestoreUpdateData['name'] = _nameController.text;
+        }
+
+        // Update Email in Firebase Auth
         if (_emailController.text != _currentUser?.email) {
-          await _currentUser?.updateEmail(_emailController.text);
-          // After changing email, it's good practice to send a verification email again.
-          await _currentUser?.sendEmailVerification();
+          await _currentUser?.verifyBeforeUpdateEmail(_emailController.text);
+          firestoreUpdateData['email'] = _emailController.text; // Update email in Firestore as well
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Email updated. Please check your new email for verification!')
@@ -60,24 +92,29 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
           }
         }
         
-        // Phone Number Update Note:
-        // Updating phone numbers is a more complex process in Firebase Authentication,
-        // typically requiring a PhoneAuthProvider with SMS verification.
-        // Direct update via user.updatePhoneNumber() is not as straightforward as displayName/email.
-        // This profile page will *display* the phone number, but the 'Update Profile' button
-        // will NOT trigger a phone number update. A dedicated flow would be needed for that.
-        // For example, using Firebase UI Auth's Phone Sign-in flow to update/verify a new number.
+        // Update Phone Number in Firestore (Firebase Auth directly handles phone authentication,
+        // but for profile display/storage, we can put it in Firestore)
+        if (_phoneController.text != (_currentUser?.phoneNumber ?? '')) {
+          firestoreUpdateData['phoneNumber'] = _phoneController.text;
+          // Note: Actual Firebase Auth phone number *update* involves SMS verification
+          // and linking credentials, which is more complex than simple profile updates.
+          // This simply stores the new number in your Firestore profile.
+        }
 
+        // Update Firestore document if there are changes
+        if (firestoreUpdateData.isNotEmpty) {
+          await _databaseService.updateUserData(_currentUser!.uid, firestoreUpdateData);
+        }
 
-        // Reload user to get the latest data from Firebase
+        // Reload user to get the latest data from Firebase Auth
         await _currentUser?.reload();
         _currentUser = FirebaseAuth.instance.currentUser; // Get the refreshed user object
         setState(() {
-          // Update controllers to reflect any changes from reload (e.g., photoURL if it was changed externally)
+          // Update controllers to reflect any changes from reload or Firestore
           _nameController.text = _currentUser?.displayName ?? '';
           _emailController.text = _currentUser?.email ?? '';
-          _phoneController.text = _currentUser?.phoneNumber ?? '';
-        }); 
+          _phoneController.text = _currentUser?.phoneNumber ?? ''; // This might not update if Firebase Auth phone is not updated
+        });
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -88,7 +125,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
         String message = 'Failed to update profile.';
         if (e.code == 'requires-recent-login') {
           message = 'Please re-authenticate to update sensitive information like email.';
-          // You might navigate to a re-authentication screen here.
         } else {
           message = e.message ?? message;
         }
@@ -107,12 +143,11 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    _currentUser = FirebaseAuth.instance.currentUser; // Ensure current user is always up-to-date
+    _currentUser = FirebaseAuth.instance.currentUser;
     
-    // Fallback for null user - ideally, this page should only be accessible if logged in
     if (_currentUser == null) {
       return Scaffold(
-        appBar: AppBar(title: Text('Profile')),
+        appBar: AppBar(title: const Text('Profile')),
         body: const Center(child: Text('User not logged in.')),
       );
     }
@@ -120,7 +155,7 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF9A577E), // Match app bar gradient color
+        backgroundColor: const Color(0xFF9A577E),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -129,10 +164,8 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profile Image (editable - allows tapping for future image picker implementation)
               GestureDetector(
                 onTap: () {
-                  // TODO: Implement image picking and uploading logic here
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Image picker functionality coming soon!')),
                   );
@@ -149,7 +182,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Current Display Name and Email for quick overview
               Text(
                 _currentUser?.displayName ?? 'No Name',
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -159,7 +191,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              // Editable Username (Display Name)
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -175,7 +206,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 },
               ),
               const SizedBox(height: 16),
-              // Editable Email
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -184,7 +214,7 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                   prefixIcon: const Icon(Icons.email),
                   suffixIcon: _currentUser!.emailVerified
                       ? const Icon(Icons.verified, color: Colors.green)
-                      : const Icon(Icons.warning, color: Colors.orange), // Indicate unverified email
+                      : const Icon(Icons.warning, color: Colors.orange),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
@@ -198,7 +228,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 },
               ),
               const SizedBox(height: 16),
-              // Editable Phone Number (with crucial note)
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
@@ -207,8 +236,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                   prefixIcon: Icon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
-                // Removed readOnly: true. User can type, but 'Update Profile' won't save it directly.
-                // A full phone number update requires PhoneAuthCredential and SMS verification.
               ),
               const SizedBox(height: 8),
               const Text(
@@ -217,17 +244,15 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              // Update Profile Button
               ElevatedButton.icon(
                 onPressed: _updateProfile,
                 icon: const Icon(Icons.save),
                 label: const Text('Update Profile'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50), // Full width button
+                  minimumSize: const Size.fromHeight(50),
                 ),
               ),
               const SizedBox(height: 16),
-              // Password Display (masked) and Change Password Button
               const Text(
                 'Password:',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -235,7 +260,7 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
               TextFormField(
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: '********', // Masked password for display
+                  hintText: '********',
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -249,7 +274,7 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock),
                 ),
-                enabled: false, // Password cannot be directly edited or viewed unmasked here
+                enabled: false,
               ),
               const SizedBox(height: 8),
               const Text(
@@ -260,7 +285,6 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () {
-                  // Navigate to Firebase UI Auth's ChangePasswordScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -273,26 +297,23 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 icon: const Icon(Icons.lock_reset),
                 label: const Text('Change Password'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50), // Full width button
-                  backgroundColor: Colors.orange, // Differentiate button
+                  minimumSize: const Size.fromHeight(50),
+                  backgroundColor: Colors.orange,
                 ),
               ),
-              // Email verification button if email is not verified
               if (!_currentUser!.emailVerified)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: TextButton.icon(
+                    icon: const Icon(Icons.email),
+                    label: const Text('Send Verification Email'),
                     onPressed: () async {
                       await _currentUser?.sendEmailVerification();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Verification email sent!')
-                          ),
-                        );
-                      }
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Verification email sent!')),
+                      );
                     },
-                    icon: const Icon(Icons.mark_email_unread),
-                    label: const Text('Resend Email Verification'),
                   ),
                 ),
             ],
