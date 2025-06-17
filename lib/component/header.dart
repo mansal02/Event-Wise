@@ -10,7 +10,7 @@ class Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = size ?? MediaQuery.of(context).size;
-    final headerHeight = screenSize.height * 0.25; // Reduced height
+    final headerHeight = screenSize.height * 0.18; // Reduced height
 
     // Remove any logic or widget that would make this header "sticky" (fixed position).
     // Just return the header as a normal widget in the widget tree.
