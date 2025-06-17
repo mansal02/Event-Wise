@@ -307,9 +307,11 @@ class _BookingPageState extends State<BookingPage> {
                         return MessageCard(
                           message: data['message'],
                           sender: data['sender'],
+
                           timestamp: data['timestamp'] != null
                               ? data['timestamp'].toDate()
                               : DateTime.now(),
+
                         );
                       }).toList(),
                     );
