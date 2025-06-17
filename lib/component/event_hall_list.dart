@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart'; 
 
 import '../details/event_hall_package.dart'; 
 
@@ -25,7 +25,7 @@ class EventHallList extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+            children: [  
               Text(
                 'Event Hall Packages',
                 style: GoogleFonts.lato(
