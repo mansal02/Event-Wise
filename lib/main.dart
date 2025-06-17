@@ -14,6 +14,7 @@ import 'page/booking_page.dart';
 import 'details/event_hall_package.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
+import 'package:event_wise_2/page/admin_page.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -137,6 +138,21 @@ class _MyAppState extends State<MyApp> {
                   return const Text('Error: Event Hall Package details not found.');
                 }
                 return BookingPage(eventHallPackage: package);
+              },
+            ),
+
+            GoRoute(
+              path: '/admin', // New route for admin page
+              redirect: (context, state) {
+                final appState = Provider.of<ApplicationState>(context, listen: false);
+                // In a real app, you would also check for admin role:
+                 if (!appState.loggedIn || !appState.isAdmin) {
+                  return '/sign-in';
+                }
+                return null;
+              },
+              builder: (context, state) {
+                return const AdminPage(); // The new AdminPage
               },
             ),
           ],
