@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../component/event_hall_list.dart';
-import '../details/event_hall_packages.dart'; 
 import '../details/event_hall_package.dart'; 
 
 class EventHallPage extends StatelessWidget {
