@@ -1,19 +1,21 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:event_wise_2/component/drawer.dart';
-import 'package:flutter/material.dart';
+import 'package:event_wise_2/details/event_hall_packages.dart';
+import 'package:event_wise_2/page/profile_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:event_wise_2/page/profile_page.dart';
-import 'package:event_wise_2/details/event_hall_packages.dart';
-import 'component/AppBar.dart';
+
 import 'app_state.dart';
-import 'page/home_page.dart';
-import 'page/event_hall_page.dart';
-import 'page/booking_page.dart'; 
-import 'details/event_hall_package.dart'; 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'component/AppBar.dart';
+import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
+import 'page/booking_page.dart';
+import 'page/event_hall_page.dart';
+import 'page/home_page.dart';
+import 'page/mybookings.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -128,17 +130,23 @@ class _MyAppState extends State<MyApp> {
                 );
               },
             ),
-
-            GoRoute(
-              path: '/booking',
-              builder: (context, state) {
-                final EventHallPackage? package = state.extra as EventHallPackage?;
-                if (package == null) {
-                  return const Text('Error: Event Hall Package details not found.');
-                }
-                return BookingPage(eventHallPackage: package);
-              },
-            ),
+GoRoute(
+  path: '/mybookings',
+  builder: (context, state) {
+    return MyBookingsPage();
+  },
+),
+GoRoute(
+  path: '/booking',
+  builder: (context, state) {
+    final EventHallPackage? package = state.extra as EventHallPackage?;
+    if (package == null) {
+      return const Text('Error: Event Hall Package details not found.');
+    }
+    return BookingPage(eventHallPackage: package);
+  },
+),
+            
           ],
         ),
       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart'; 
+
 import '../details/event_hall_package.dart'; 
 
 class EventHallPreview extends StatelessWidget {
@@ -135,7 +136,7 @@ class EventHallPreview extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Price: RM${package.price.toStringAsFixed(2)}/day',
+                                    'Price From: RM${package.price.toStringAsFixed(2)}/day',
                                     style: GoogleFonts.lato(
                                       fontWeight: FontWeight.bold,
                                       fontSize: size.width * 0.032,
