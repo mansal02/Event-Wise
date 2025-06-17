@@ -85,6 +85,14 @@ class Drawerbar extends StatelessWidget {
                   context.go('/mybookings');
                 },
               ),
+              if (appState.loggedIn && appState.isAdmin) // Conditionally display for admin
+                SideBarList(
+                  icon: Icons.admin_panel_settings, // Example icon
+                  text: 'A D M I N   P A N E L',
+                  onTap: () {
+                    context.go('/admin');
+                  },
+                ),
               const Spacer(),
               if (appState.loggedIn)
                 Padding(

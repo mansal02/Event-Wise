@@ -12,10 +12,12 @@ import 'app_state.dart';
 import 'component/AppBar.dart';
 import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
-import 'page/booking_page.dart';
-import 'page/event_hall_page.dart';
-import 'page/home_page.dart';
-import 'page/mybookings.dart';
+import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
+import 'page/booking_page.dart'; // From 'main' branch
+import 'page/event_hall_page.dart'; // From 'main' branch
+import 'page/home_page.dart'; // From 'main' branch
+import 'page/mybookings.dart'; // From 'main' branch
+
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -122,31 +124,46 @@ class _MyAppState extends State<MyApp> {
               },
             ),
             GoRoute(
-              path: '/event-hall', 
+              path: '/event-hall',
               builder: (context, state) {
                 return EventHallPage(
                   eventHallPackages: eventHallPackages,
-                  headerMaxExtent: 200, 
+                  headerMaxExtent: 200,
                 );
               },
             ),
-GoRoute(
-  path: '/mybookings',
-  builder: (context, state) {
-    return MyBookingsPage();
-  },
-),
-GoRoute(
-  path: '/booking',
-  builder: (context, state) {
-    final EventHallPackage? package = state.extra as EventHallPackage?;
-    if (package == null) {
-      return const Text('Error: Event Hall Package details not found.');
-    }
-    return BookingPage(eventHallPackage: package);
-  },
-),
-            
+            // Routes from 'main' branch
+            GoRoute(
+              path: '/mybookings',
+              builder: (context, state) {
+                return MyBookingsPage();
+              },
+            ),
+            GoRoute(
+              path: '/booking',
+              builder: (context, state) {
+                final EventHallPackage? package = state.extra as EventHallPackage?;
+                if (package == null) {
+                  return const Text('Error: Event Hall Package details not found.');
+                }
+                return BookingPage(eventHallPackage: package);
+              },
+            ),
+            // Route from 'admin' branch
+            GoRoute(
+              path: '/admin', // New route for admin page
+              redirect: (context, state) {
+                final appState = Provider.of<ApplicationState>(context, listen: false);
+                // In a real app, you would also check for admin role:
+                if (!appState.loggedIn || !appState.isAdmin) {
+                  return '/sign-in';
+                }
+                return null;
+              },
+              builder: (context, state) {
+                return const AdminPage(); // The new AdminPage
+              },
+            ),
           ],
         ),
       ],
