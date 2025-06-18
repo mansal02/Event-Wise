@@ -12,15 +12,6 @@ import 'app_state.dart';
 import 'component/AppBar.dart';
 import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
-
-import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
-import 'page/booking_page.dart'; // From 'main' branch
-import 'page/event_hall_page.dart'; // From 'main' branch
-import 'page/home_page.dart'; // From 'main' branch
-import 'page/mybookings.dart'; // From 'main' branch
-
-
-
 import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
 import 'page/booking_page.dart'; // From 'main' branch
 import 'page/booking_edit_page.dart'; // Import the BookingEditPage widget
