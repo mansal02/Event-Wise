@@ -72,122 +72,98 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-
-              final doc = snapshot.data!.docs[index];
-              final booking = doc.data() as Map<String, dynamic>;
+              final booking =
+                  snapshot.data!.docs[index].data() as Map<String, dynamic>;
               final bookingDate = (booking['bookingDate'] as Timestamp?)
                   ?.toDate();
               final startDate = (booking['startDate'] as Timestamp?)?.toDate();
               final endDate = (booking['endDate'] as Timestamp?)?.toDate();
+              final bookingStatus =
+                  booking['status'] as String?; // Get the booking status
 
-              final status = (booking['status'] ?? '').toString().toLowerCase();
+              // Safely handle 'addOns' which could be a List or a Map based on booking data
+              final dynamic addOnsData = booking['addOns'];
+              List<String> displayedAddOns = [];
 
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      booking['eventName'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              if (addOnsData is List) {
+                // New format: List of add-on names
+                displayedAddOns = List<String>.from(addOnsData);
+              } else if (addOnsData is Map<String, dynamic>) {
+                // Old format (if any): Map of add-on name to price
+                displayedAddOns = addOnsData.entries
+                    .map((entry) => '${entry.key}: RM ${entry.value}')
+                    .toList();
+              }
+
+              return Card(
+                margin: const EdgeInsets.all(8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              booking['eventName'] ?? 'N/A',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // --- Conditional Edit Button START ---
+                          // Only show the Edit button if the booking status is 'Accepted'
+                          if (bookingStatus == 'Accepted')
+                            TextButton.icon(
+                              icon: const Icon(Icons.edit, size: 20),
+                              label: const Text('Edit'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                              ),
+                              onPressed: () {
+                                context.go(
+                                  '/edit-booking',
+                                  extra: {
+                                    'docId': snapshot.data!.docs[index].id,
+                                    'data': booking,
+                                  },
+                                );
+                              },
+                            ),
+                          // --- Conditional Edit Button END ---
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      runSpacing: 8,
-                      spacing: 20,
-                      children: [
-                        Text(
-                          'Start: ${startDate != null ? DateFormat('yyyy-MM-dd').format(startDate) : 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          'End: ${endDate != null ? DateFormat('yyyy-MM-dd').format(endDate) : 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          'Days: ${booking['days'] ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          'Pax: ${booking['visitorPax'] ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Status: ${booking['status'] ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blueGrey,
-                          ),
-                        ),
-                        Text(
-                          'RM ${booking['totalPrice'] ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Booked On: ${bookingDate != null ? DateFormat('yyyy-MM-dd HH:mm').format(bookingDate) : 'N/A'}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-
-                    const SizedBox(height: 12),
-                    if (status == 'accepted')
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '/edit-booking',
-                              extra: {'docId': doc.id, 'data': booking},
-                            );
-                          },
-                          icon: const Icon(Icons.edit),
-                          label: const Text('Edit'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                          ),
-                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Start Date: ${startDate != null ? DateFormat('yyyy-MM-dd').format(startDate) : 'N/A'}',
                       ),
-
-                  ],
+                      Text(
+                        'End Date: ${endDate != null ? DateFormat('yyyy-MM-dd').format(endDate) : 'N/A'}',
+                      ),
+                      Text('Days: ${booking['days'] ?? 'N/A'}'),
+                      Text('Visitor Pax: ${booking['visitorPax'] ?? 'N/A'}'),
+                      Text('Total Price: RM ${booking['totalPrice'] ?? 'N/A'}'),
+                      Text(
+                        'Booked On: ${bookingDate != null ? DateFormat('yyyy-MM-dd HH:mm').format(bookingDate) : 'N/A'}',
+                      ),
+                      if (displayedAddOns.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Selected Add-Ons:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        // Iterate through the safely prepared list
+                        ...displayedAddOns
+                            .map((item) => Text('- $item'))
+                            .toList(),
+                      ],
+                      Text('Status: ${booking['status'] ?? 'N/A'}'),
+                    ],
+                  ),
                 ),
               );
             },
@@ -197,4 +173,3 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
     );
   }
 }
-

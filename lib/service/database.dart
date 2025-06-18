@@ -1,3 +1,4 @@
+//database.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -12,22 +13,36 @@ class DatabaseService {
   /// Creates or updates a user's profile document in Firestore.
   /// This should be called after a user signs up or logs in, to ensure their profile
   /// data (name, role, phone number) is synchronized with Firestore.
-  Future<void> saveUser(User user, String? name, String? phoneNumber, String role) async {
+  Future<void> saveUser(
+    User user,
+    String? name,
+    String? phoneNumber,
+    String role,
+  ) async {
     // Convert username to lowercase for consistent storage and lookup
-    final String lowerCaseName = name?.toLowerCase() ?? user.displayName?.toLowerCase() ?? 'anonymous user';
+    final String lowerCaseName =
+        name?.toLowerCase() ??
+        user.displayName?.toLowerCase() ??
+        'anonymous user';
 
     final userDocRef = _firestore.collection('users').doc(user.uid);
     try {
-      await userDocRef.set({
-        'name': lowerCaseName, // Store lowercase name
-        'originalName': name, // Store original casing if needed for display
-        'email': user.email,
-        'phoneNumber': phoneNumber ?? user.phoneNumber ?? '',
-        'role': role, // e.g., 'user', 'admin'
-        'createdAt': FieldValue.serverTimestamp(), // Set only on creation
-        'lastLoginAt': FieldValue.serverTimestamp(), // Update on every login/save
-      }, SetOptions(merge: true)); // Use merge: true to update existing fields without overwriting the whole document
-      print('User data saved/updated for: ${user.uid} with username: $lowerCaseName');
+      await userDocRef.set(
+        {
+          'name': lowerCaseName, // Store lowercase name
+          'originalName': name, // Store original casing if needed for display
+          'email': user.email,
+          'phoneNumber': phoneNumber ?? user.phoneNumber ?? '',
+          'role': role, // e.g., 'user', 'admin'
+          'createdAt': FieldValue.serverTimestamp(), // Set only on creation
+          'lastLoginAt':
+              FieldValue.serverTimestamp(), // Update on every login/save
+        },
+        SetOptions(merge: true),
+      ); // Use merge: true to update existing fields without overwriting the whole document
+      print(
+        'User data saved/updated for: ${user.uid} with username: $lowerCaseName',
+      );
     } catch (e) {
       print("Error saving user data: $e");
     }
@@ -76,7 +91,8 @@ class DatabaseService {
   /// Fetches all users who have the 'admin' role.
   /// This can be used to display a list of administrators in an admin panel.
   Stream<QuerySnapshot<Map<String, dynamic>>> getAdmins() {
-    return _firestore.collection('users')
+    return _firestore
+        .collection('users')
         .where('role', isEqualTo: 'admin')
         .snapshots();
   }
@@ -85,7 +101,9 @@ class DatabaseService {
   /// Ensure you have proper authentication and authorization checks before calling this.
   Future<void> grantAdminRole(String userId) async {
     try {
-      await _firestore.collection('users').doc(userId).update({'role': 'admin'});
+      await _firestore.collection('users').doc(userId).update({
+        'role': 'admin',
+      });
       print('User $userId granted admin role.');
     } catch (e) {
       print("Error granting admin role to user $userId: $e");
@@ -106,10 +124,13 @@ class DatabaseService {
   // --- Booking Management Methods ---
 
   /// Adds a new booking to the 'bookings' collection.
+  /// IMPT: Ensure that 'hallPrice' is included in the bookingData map when this function is CALLED.
   Future<void> addBooking(Map<String, dynamic> bookingData) async {
     try {
       // Add the booking and let Firestore auto-generate the document ID
-      DocumentReference docRef = await _firestore.collection('bookings').add(bookingData);
+      DocumentReference docRef = await _firestore
+          .collection('bookings')
+          .add(bookingData);
       // Optionally, you can update the document to include its own ID if needed
       await docRef.update({'bookingId': docRef.id});
       print('Booking added with ID: ${docRef.id}');
@@ -120,7 +141,8 @@ class DatabaseService {
 
   /// Fetches all bookings for a specific user.
   Stream<QuerySnapshot<Map<String, dynamic>>> getUserBookings(String userId) {
-    return _firestore.collection('bookings')
+    return _firestore
+        .collection('bookings')
         .where('userId', isEqualTo: userId)
         .orderBy('bookingDate', descending: true)
         .snapshots();
@@ -128,13 +150,17 @@ class DatabaseService {
 
   /// Fetches all bookings (for admin view).
   Stream<QuerySnapshot<Map<String, dynamic>>> getAllBookings() {
-    return _firestore.collection('bookings')
+    return _firestore
+        .collection('bookings')
         .orderBy('bookingDate', descending: true)
         .snapshots();
   }
 
   /// Updates an existing booking.
-  Future<void> updateBooking(String bookingId, Map<String, dynamic> data) async {
+  Future<void> updateBooking(
+    String bookingId,
+    Map<String, dynamic> data,
+  ) async {
     try {
       await _firestore.collection('bookings').doc(bookingId).update(data);
       print('Booking updated: $bookingId');
@@ -158,8 +184,12 @@ class DatabaseService {
   /// Example method to get data from a Firestore collection
   Future<List<Map<String, dynamic>>> getData(String collectionPath) async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection(collectionPath).get();
-      return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      QuerySnapshot snapshot = await _firestore
+          .collection(collectionPath)
+          .get();
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
     } catch (e) {
       print("Error getting data from $collectionPath: $e");
       return [];
@@ -176,7 +206,11 @@ class DatabaseService {
   }
 
   /// Example method to update data in a Firestore document
-  Future<void> updateDocData(String collectionPath, String docId, Map<String, dynamic> data) async {
+  Future<void> updateDocData(
+    String collectionPath,
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
     try {
       await _firestore.collection(collectionPath).doc(docId).update(data);
     } catch (e) {
