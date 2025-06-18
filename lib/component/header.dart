@@ -1,19 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
-class Header extends StatelessWidget {
+class Header extends StatefulWidget {
   final Size? size;
+  final ValueChanged<String> onSearchChanged; // Callback for search input changes
 
-  const Header({super.key, this.size});
+  const Header({super.key, this.size, required this.onSearchChanged});
+
+  @override
+  State<Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<Header> {
+  late TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    // Add a listener to the text controller to trigger the callback
+    _searchController.addListener(() {
+      widget.onSearchChanged(_searchController.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Remove the listener to prevent memory leaks
+    _searchController.removeListener(() {
+      widget.onSearchChanged(_searchController.text);
+    });
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = size ?? MediaQuery.of(context).size;
-    final headerHeight = screenSize.height * 0.18; // Reduced height
-
-    // Remove any logic or widget that would make this header "sticky" (fixed position).
-    // Just return the header as a normal widget in the widget tree.
+    final screenSize = widget.size ?? MediaQuery.of(context).size;
+    final headerHeight = screenSize.height * 0.18;
 
     return Container(
       width: screenSize.width,
@@ -34,25 +58,43 @@ class Header extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: Search and Auth button
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.search, color: Colors.white, size: 22),
-                    SizedBox(width: screenSize.width * 0.02),
-                    Text(
-                      'Search',
-                      style: GoogleFonts.lato(
+                Expanded( // Use Expanded so TextField takes available space
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search packages...',
+                      hintStyle: GoogleFonts.lato(
                         fontWeight: FontWeight.w300,
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(0.7),
                         fontSize: screenSize.width * 0.042,
                       ),
+                      prefixIcon: const Icon(Icons.search, color: Colors.white, size: 22),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.white),
+                              onPressed: () {
+                                _searchController.clear();
+                                // Manually trigger search change after clearing
+                                widget.onSearchChanged('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none, // Remove default border for cleaner look
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
                     ),
-                  ],
+                    style: GoogleFonts.lato(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white,
+                      fontSize: screenSize.width * 0.042,
+                    ),
+                    cursorColor: Colors.white, // White cursor for visibility on dark background
+                  ),
                 ),
-                
+                // If you had an auth button here previously, it should be re-added.
+                // Based on previous files, it seemed handled by AppBar/Drawer.
               ],
             ),
             SizedBox(height: headerHeight * 0.10),

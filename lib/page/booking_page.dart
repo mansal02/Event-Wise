@@ -32,8 +32,8 @@ class _BookingPageState extends State<BookingPage> {
   User? _currentUser;
   final DatabaseService _databaseService = DatabaseService();
 
-  // Define available add-ons with their prices
-  final Map<String, double> _availableAddOns = {
+  // Define ALL possible add-ons with their prices
+  final Map<String, double> _allPossibleAddOns = {
     'Catering': 1500.0,
     'Emcee': 500.0,
     'DJ': 800.0,
@@ -41,14 +41,20 @@ class _BookingPageState extends State<BookingPage> {
     'Lighting System': 600.0,
   };
 
-  // State to hold selected add-ons
-  final Map<String, bool> _selectedAddOns = {
-    'Catering': false,
-    'Emcee': false,
-    'DJ': false,
-    'Sound System': false,
-    'Lighting System': false,
+  // Define which add-ons are allowed for each package ID
+  // This is the core logic based on your requirements
+  final Map<String, List<String>> _packageAddOnMapping = {
+    'EH-a-1': ['Catering', 'Emcee', 'DJ', 'Sound System', 'Lighting System'], // Empty Hall
+    'EH-b-1': ['Sound System', 'DJ', 'Catering'], // Wedding Package
+    'EH-c-1': ['Catering', 'Lighting System', 'DJ'], // Corporate Package
+    'EH-d-1': ['Catering'], // Party Package
+    'EH-e-1': ['Catering', 'Emcee', 'DJ', 'Sound System', 'Lighting System'], // Custom Package
   };
+
+  // This map will store only the add-ons allowed for the current package, with their prices
+  late Map<String, double> _currentPackageAllowedAddOns;
+  // This map will store the selected state (true/false) for only the add-ons allowed for the current package
+  final Map<String, bool> _selectedAddOns = {};
 
   // State variable for dynamically calculated total price
   double _currentCalculatedTotalPrice = 0.0;
@@ -68,51 +74,59 @@ class _BookingPageState extends State<BookingPage> {
       }
     });
 
-    // Add listeners to text controllers to update total price dynamically
-    // _daysController listener is implicitly handled by date selection now
+    _initializeAddOnsForCurrentPackage(); // Initialize add-ons specific to this package
+
     _personsController.addListener(_updateTotalPrice);
-    // Initial calculation when the page loads
-    _updateTotalPrice();
+    _updateTotalPrice(); // Initial calculation
+  }
+
+  // New method to set up add-ons based on the current event package
+  void _initializeAddOnsForCurrentPackage() {
+    _currentPackageAllowedAddOns = {};
+    _selectedAddOns.clear(); // Clear any previous selections
+
+    String packageId = widget.eventHallPackage.id;
+    List<String> allowedNames = _packageAddOnMapping[packageId] ?? [];
+
+    for (String addOnName in allowedNames) {
+      if (_allPossibleAddOns.containsKey(addOnName)) {
+        _currentPackageAllowedAddOns[addOnName] = _allPossibleAddOns[addOnName]!;
+        _selectedAddOns[addOnName] = false; // Initialize all allowed add-ons as unselected
+      }
+    }
   }
 
   @override
   void dispose() {
     _startDateController.dispose();
     _endDateController.dispose();
-    // _daysController.removeListener(_updateTotalPrice); // Not needed as it's readOnly and updated via date pickers
     _daysController.dispose();
-    _personsController.removeListener(_updateTotalPrice); // Remove listener
+    _personsController.removeListener(_updateTotalPrice);
     _personsController.dispose();
     super.dispose();
   }
 
-  // Method to calculate and update the total price
   void _updateTotalPrice() {
     double basePrice = widget.eventHallPackage.price;
-    // Get days from controller, which is updated by date pickers
-    int days = int.tryParse(_daysController.text) ?? 1; // Default to 1 day if not entered or calculated yet
-    int persons = int.tryParse(_personsController.text) ?? 1; // Default to 1 person if not entered
+    int days = int.tryParse(_daysController.text) ?? 1;
+    int persons = int.tryParse(_personsController.text) ?? 1;
 
-    // Calculate price based on days (assuming base price is per day)
     double packageCost = basePrice * days;
 
-    // Calculate add-on cost
     double addOnCost = 0.0;
     _selectedAddOns.forEach((name, isSelected) {
       if (isSelected) {
-        addOnCost += _availableAddOns[name] ?? 0.0;
+        // Use the price from _allPossibleAddOns for consistency and safety
+        addOnCost += _allPossibleAddOns[name] ?? 0.0;
       }
     });
 
-    // Calculate per-person cost
-    // You can adjust the per-person rate (e.g., RM 10.0 per person)
-    double perPersonCost = persons * 10.0; 
+    double perPersonCost = persons * 4.0;
 
     setState(() {
       _currentCalculatedTotalPrice = packageCost + addOnCost + perPersonCost;
     });
   }
-
 
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -125,15 +139,13 @@ class _BookingPageState extends State<BookingPage> {
       setState(() {
         _startDate = picked;
         _startDateController.text = DateFormat('yyyy-MM-dd').format(_startDate!);
-        // If end date is already selected, recalculate days
         if (_endDate != null && _startDate != null && _startDate!.isBefore(_endDate!)) {
           int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
           _daysController.text = calculatedDays.toString();
         } else if (_startDate != null && _endDate == null) {
-          // If only start date is selected, assume 1 day for initial calculation
-          _daysController.text = '1';
+          _daysController.text = '1'; // Default to 1 day if only start date selected
         }
-        _updateTotalPrice(); // Update total price when dates change
+        _updateTotalPrice();
       });
     }
   }
@@ -142,23 +154,21 @@ class _BookingPageState extends State<BookingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
-      firstDate: _startDate ?? DateTime.now(), // End date cannot be before start date
+      firstDate: _startDate ?? DateTime.now(),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _endDate) {
       setState(() {
         _endDate = picked;
         _endDateController.text = DateFormat('yyyy-MM-dd').format(_endDate!);
-        // Recalculate days and update total price
         if (_startDate != null && _endDate != null) {
           int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
-          _daysController.text = calculatedDays.toString(); // Update days controller
+          _daysController.text = calculatedDays.toString();
         }
-        _updateTotalPrice(); // Update total price when dates change
+        _updateTotalPrice();
       });
     }
   }
-
 
   void _confirmBooking() async {
     if (_formKey.currentState!.validate()) {
@@ -171,24 +181,23 @@ class _BookingPageState extends State<BookingPage> {
         return;
       }
 
-      // Ensure days and persons controllers are updated before final calculation
       int days = int.tryParse(_daysController.text) ?? 1;
-      int persons = int.tryParse(_personsController.text) ?? 1;
+      int persons = int.tryParse(_personsController.text) ?? 0;
 
+      List<String> selectedAddOnNames = _selectedAddOns.keys.where((name) => _selectedAddOns[name]!).toList();
 
-      // Prepare booking data
       Map<String, dynamic> bookingData = {
         'userId': _currentUser!.uid,
         'eventHallPackageId': widget.eventHallPackage.id,
         'eventName': widget.eventHallPackage.name,
-        'eventPrice': widget.eventHallPackage.price, // This is the base price per day/event
+        'eventPrice': widget.eventHallPackage.price,
         'details': 'Booking for ${widget.eventHallPackage.name}',
-        'visitorPax': persons, // Use the parsed persons value
+        'visitorPax': persons,
         'startDate': _startDate != null ? Timestamp.fromDate(_startDate!) : null,
         'endDate': _endDate != null ? Timestamp.fromDate(_endDate!) : null,
-        'days': days, // Use the parsed days value
-        'addOns': _selectedAddOns.keys.where((name) => _selectedAddOns[name]!).toList(),
-        'totalPrice': _currentCalculatedTotalPrice, // Use the dynamically calculated total price
+        'days': days,
+        'addOns': selectedAddOnNames, // Save only the selected add-on names
+        'totalPrice': _currentCalculatedTotalPrice,
         'bookingDate': FieldValue.serverTimestamp(),
         'status': 'pending',
       };
@@ -270,7 +279,7 @@ class _BookingPageState extends State<BookingPage> {
               Text(widget.eventHallPackage.description),
               const SizedBox(height: 8),
 
-              Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'), // Clarified base price label
+              Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'),
               const SizedBox(height: 16),
 
               const Text(
@@ -333,26 +342,28 @@ class _BookingPageState extends State<BookingPage> {
               const SizedBox(height: 24),
 
               // --- Add-ons Section ---
-              const Text(
-                'Event Add-ons',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              ..._availableAddOns.keys.map((addOnName) {
-                return CheckboxListTile(
-                  title: Text('$addOnName (RM${_availableAddOns[addOnName]?.toStringAsFixed(2)})'),
-                  value: _selectedAddOns[addOnName],
-                  onChanged: (bool? newValue) {
-                    setState(() {
-                      _selectedAddOns[addOnName] = newValue!;
-                      _updateTotalPrice(); // Update total price when add-ons change
-                    });
-                  },
-                );
-              }).toList(),
+              // Only display this section if there are allowed add-ons for the current package
+              if (_currentPackageAllowedAddOns.isNotEmpty) ...[
+                const Text(
+                  'Event Add-ons',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Divider(),
+                ..._currentPackageAllowedAddOns.keys.map((addOnName) {
+                  return CheckboxListTile(
+                    title: Text('$addOnName (RM${_currentPackageAllowedAddOns[addOnName]?.toStringAsFixed(2)})'),
+                    value: _selectedAddOns[addOnName],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        _selectedAddOns[addOnName] = newValue!;
+                        _updateTotalPrice(); // Update total price when add-ons change
+                      });
+                    },
+                  );
+                }).toList(),
+                const SizedBox(height: 24),
+              ],
               // --- End Add-ons Section ---
-
-              const SizedBox(height: 24),
 
               const Text(
                 'Booking Details',
@@ -412,15 +423,14 @@ class _BookingPageState extends State<BookingPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _daysController,
-                            readOnly: true, // Made read-only
+                            readOnly: true,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: 'Days',
-                              hintText: 'Calculated from dates', // Changed hint
+                              hintText: 'Calculated from dates',
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.timelapse),
                             ),
-                            // Removed validator as it's no longer user editable
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -450,7 +460,6 @@ class _BookingPageState extends State<BookingPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // --- Dynamic Total Price Display ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
@@ -465,7 +474,7 @@ class _BookingPageState extends State<BookingPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16), // Space before button
+                    const SizedBox(height: 16),
 
                     Center(
                       child: ElevatedButton.icon(
