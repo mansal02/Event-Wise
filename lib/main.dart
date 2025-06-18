@@ -14,19 +14,21 @@ import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
 import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
 import 'page/booking_page.dart'; // From 'main' branch
+import 'page/booking_edit_page.dart'; // Import the BookingEditPage widget
 import 'page/event_hall_page.dart'; // From 'main' branch
 import 'page/home_page.dart'; // From 'main' branch
 import 'page/mybookings.dart'; // From 'main' branch
 
-
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(ChangeNotifierProvider(
-    create: (context) => ApplicationState(),
-    builder: (context, child) => const MyApp(),
-  ));
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ApplicationState(),
+      builder: (context, child) => const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -39,10 +41,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Event Wise',
-      routerConfig: _router(),
-    );
+    return MaterialApp.router(title: 'Event Wise', routerConfig: _router());
   }
 
   GoRouter _router() {
@@ -56,9 +55,7 @@ class _MyAppState extends State<MyApp> {
                 ForgotPasswordAction((context, email) {
                   final uri = Uri(
                     path: '/sign-in/forgot-password',
-                    queryParameters: <String, String?>{
-                      'email': email,
-                    },
+                    queryParameters: <String, String?>{'email': email},
                   );
                   context.push(uri.toString());
                 }),
@@ -74,9 +71,9 @@ class _MyAppState extends State<MyApp> {
 
                   if (user != null) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Welcome!')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Welcome!')));
                       context.go('/');
                     }
                   }
@@ -106,14 +103,14 @@ class _MyAppState extends State<MyApp> {
             );
           },
           routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => const HomePage(),
-            ),
+            GoRoute(path: '/', builder: (context, state) => const HomePage()),
             GoRoute(
               path: '/profile',
               redirect: (context, state) {
-                final appState = Provider.of<ApplicationState>(context, listen: false);
+                final appState = Provider.of<ApplicationState>(
+                  context,
+                  listen: false,
+                );
                 if (!appState.loggedIn) {
                   return '/sign-in';
                 }
@@ -140,11 +137,25 @@ class _MyAppState extends State<MyApp> {
               },
             ),
             GoRoute(
+              path: '/edit-booking',
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>;
+                return BookingEditPage(
+                  docId: extra['docId'],
+                  data: extra['data'],
+                );
+              },
+            ),
+
+            GoRoute(
               path: '/booking',
               builder: (context, state) {
-                final EventHallPackage? package = state.extra as EventHallPackage?;
+                final EventHallPackage? package =
+                    state.extra as EventHallPackage?;
                 if (package == null) {
-                  return const Text('Error: Event Hall Package details not found.');
+                  return const Text(
+                    'Error: Event Hall Package details not found.',
+                  );
                 }
                 return BookingPage(eventHallPackage: package);
               },
@@ -153,7 +164,10 @@ class _MyAppState extends State<MyApp> {
             GoRoute(
               path: '/admin', // New route for admin page
               redirect: (context, state) {
-                final appState = Provider.of<ApplicationState>(context, listen: false);
+                final appState = Provider.of<ApplicationState>(
+                  context,
+                  listen: false,
+                );
                 // In a real app, you would also check for admin role:
                 if (!appState.loggedIn || !appState.isAdmin) {
                   return '/sign-in';

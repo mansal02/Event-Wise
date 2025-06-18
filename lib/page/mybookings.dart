@@ -54,7 +54,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
         stream: FirebaseFirestore.instance
             .collection('bookings')
             .where('userId', isEqualTo: _currentUser!.uid)
-            .orderBy('timestamp', descending: true)
+            .orderBy('bookingDate', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -72,43 +72,118 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final booking =
-                  snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              final doc = snapshot.data!.docs[index];
+              final booking = doc.data() as Map<String, dynamic>;
               final bookingDate = (booking['bookingDate'] as Timestamp?)
                   ?.toDate();
               final startDate = (booking['startDate'] as Timestamp?)?.toDate();
               final endDate = (booking['endDate'] as Timestamp?)?.toDate();
+              final status = (booking['status'] ?? '').toString().toLowerCase();
 
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        booking['eventName'] ?? 'N/A',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking['eventName'] ?? 'N/A',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      runSpacing: 8,
+                      spacing: 20,
+                      children: [
+                        Text(
+                          'Start: ${startDate != null ? DateFormat('yyyy-MM-dd').format(startDate) : 'N/A'}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          'End: ${endDate != null ? DateFormat('yyyy-MM-dd').format(endDate) : 'N/A'}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          'Days: ${booking['days'] ?? 'N/A'}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          'Pax: ${booking['visitorPax'] ?? 'N/A'}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Status: ${booking['status'] ?? 'N/A'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blueGrey,
+                          ),
+                        ),
+                        Text(
+                          'RM ${booking['totalPrice'] ?? 'N/A'}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Booked On: ${bookingDate != null ? DateFormat('yyyy-MM-dd HH:mm').format(bookingDate) : 'N/A'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    if (status == 'accepted')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '/edit-booking',
+                              extra: {'docId': doc.id, 'data': booking},
+                            );
+                          },
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Edit'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start Date: ${startDate != null ? DateFormat('yyyy-MM-dd').format(startDate) : 'N/A'}',
-                      ),
-                      Text(
-                        'End Date: ${endDate != null ? DateFormat('yyyy-MM-dd').format(endDate) : 'N/A'}',
-                      ),
-                      Text('Days: ${booking['days'] ?? 'N/A'}'),
-                      Text('Visitor Pax: ${booking['visitorPax'] ?? 'N/A'}'),
-                      Text('Status: ${booking['status'] ?? 'N/A'}'),
-                      Text('Total Price: RM ${booking['totalPrice'] ?? 'N/A'}'),
-                      Text(
-                        'Booked On: ${bookingDate != null ? DateFormat('yyyy-MM-dd HH:mm').format(bookingDate) : 'N/A'}',
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               );
             },
