@@ -8,14 +8,17 @@ class EventHallPackage {
 
   final List<String> availableAddOns;
 
+
   const EventHallPackage({
     required this.id,
     required this.title,
     required this.description,
     required this.image,
     required this.price,
+
     // required this.customPrice, // Removed from constructor
     this.availableAddOns = const [],
+
   });
 
   String get name => title;
