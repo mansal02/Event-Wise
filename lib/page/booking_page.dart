@@ -63,7 +63,12 @@ class _BookingPageState extends State<BookingPage> {
           _currentUser = user;
         });
         if (user != null) {
-          _databaseService.saveUser(user, user.displayName, user.phoneNumber, 'user');
+          _databaseService.saveUser(
+            user,
+            user.displayName,
+            user.phoneNumber,
+            'user',
+          );
         }
       }
     });
@@ -90,8 +95,12 @@ class _BookingPageState extends State<BookingPage> {
   void _updateTotalPrice() {
     double basePrice = widget.eventHallPackage.price;
     // Get days from controller, which is updated by date pickers
-    int days = int.tryParse(_daysController.text) ?? 1; // Default to 1 day if not entered or calculated yet
-    int persons = int.tryParse(_personsController.text) ?? 1; // Default to 1 person if not entered
+    int days =
+        int.tryParse(_daysController.text) ??
+        1; // Default to 1 day if not entered or calculated yet
+    int persons =
+        int.tryParse(_personsController.text) ??
+        1; // Default to 1 person if not entered
 
     // Calculate price based on days (assuming base price is per day)
     double packageCost = basePrice * days;
@@ -106,13 +115,12 @@ class _BookingPageState extends State<BookingPage> {
 
     // Calculate per-person cost
     // You can adjust the per-person rate (e.g., RM 10.0 per person)
-    double perPersonCost = persons * 10.0; 
+    double perPersonCost = persons * 10.0;
 
     setState(() {
       _currentCalculatedTotalPrice = packageCost + addOnCost + perPersonCost;
     });
   }
-
 
   Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -124,9 +132,13 @@ class _BookingPageState extends State<BookingPage> {
     if (picked != null && picked != _startDate) {
       setState(() {
         _startDate = picked;
-        _startDateController.text = DateFormat('yyyy-MM-dd').format(_startDate!);
+        _startDateController.text = DateFormat(
+          'yyyy-MM-dd',
+        ).format(_startDate!);
         // If end date is already selected, recalculate days
-        if (_endDate != null && _startDate != null && _startDate!.isBefore(_endDate!)) {
+        if (_endDate != null &&
+            _startDate != null &&
+            _startDate!.isBefore(_endDate!)) {
           int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
           _daysController.text = calculatedDays.toString();
         } else if (_startDate != null && _endDate == null) {
@@ -142,7 +154,8 @@ class _BookingPageState extends State<BookingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
-      firstDate: _startDate ?? DateTime.now(), // End date cannot be before start date
+      firstDate:
+          _startDate ?? DateTime.now(), // End date cannot be before start date
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _endDate) {
@@ -152,20 +165,22 @@ class _BookingPageState extends State<BookingPage> {
         // Recalculate days and update total price
         if (_startDate != null && _endDate != null) {
           int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
-          _daysController.text = calculatedDays.toString(); // Update days controller
+          _daysController.text = calculatedDays
+              .toString(); // Update days controller
         }
         _updateTotalPrice(); // Update total price when dates change
       });
     }
   }
 
-
   void _confirmBooking() async {
     if (_formKey.currentState!.validate()) {
       if (_currentUser == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please log in to confirm your booking!')),
+            const SnackBar(
+              content: Text('Please log in to confirm your booking!'),
+            ),
           );
         }
         return;
@@ -175,20 +190,26 @@ class _BookingPageState extends State<BookingPage> {
       int days = int.tryParse(_daysController.text) ?? 1;
       int persons = int.tryParse(_personsController.text) ?? 1;
 
-
       // Prepare booking data
       Map<String, dynamic> bookingData = {
         'userId': _currentUser!.uid,
         'eventHallPackageId': widget.eventHallPackage.id,
         'eventName': widget.eventHallPackage.name,
-        'eventPrice': widget.eventHallPackage.price, // This is the base price per day/event
+        'eventPrice': widget
+            .eventHallPackage
+            .price, // This is the base price per day/event
         'details': 'Booking for ${widget.eventHallPackage.name}',
         'visitorPax': persons, // Use the parsed persons value
-        'startDate': _startDate != null ? Timestamp.fromDate(_startDate!) : null,
+        'startDate': _startDate != null
+            ? Timestamp.fromDate(_startDate!)
+            : null,
         'endDate': _endDate != null ? Timestamp.fromDate(_endDate!) : null,
         'days': days, // Use the parsed days value
-        'addOns': _selectedAddOns.keys.where((name) => _selectedAddOns[name]!).toList(),
-        'totalPrice': _currentCalculatedTotalPrice, // Use the dynamically calculated total price
+        'addOns': _selectedAddOns.keys
+            .where((name) => _selectedAddOns[name]!)
+            .toList(),
+        'totalPrice':
+            _currentCalculatedTotalPrice, // Use the dynamically calculated total price
         'bookingDate': FieldValue.serverTimestamp(),
         'status': 'pending',
       };
@@ -203,9 +224,9 @@ class _BookingPageState extends State<BookingPage> {
         print('Booking confirmed and saved to Firestore!');
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save booking: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to save booking: $e')));
         }
         print('Error saving booking: $e');
       }
@@ -232,10 +253,10 @@ class _BookingPageState extends State<BookingPage> {
         .doc(discussionId)
         .collection('messages')
         .add({
-      'message': message,
-      'sender': user.displayName ?? user.email ?? 'Anonymous',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'message': message,
+          'sender': user.displayName ?? user.email ?? 'Anonymous',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
@@ -244,9 +265,7 @@ class _BookingPageState extends State<BookingPage> {
     final String discussionId = widget.eventHallPackage.id;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Booking Details'),
-      ),
+      appBar: AppBar(title: const Text('Booking Details')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -263,14 +282,19 @@ class _BookingPageState extends State<BookingPage> {
 
               Text(
                 widget.eventHallPackage.name,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
 
               Text(widget.eventHallPackage.description),
               const SizedBox(height: 8),
 
-              Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'), // Clarified base price label
+              Text(
+                'Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}',
+              ), // Clarified base price label
               const SizedBox(height: 16),
 
               const Text(
@@ -296,7 +320,8 @@ class _BookingPageState extends State<BookingPage> {
                     }
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return const Center(
-                          child: Text('No messages yet. Start the discussion!'));
+                        child: Text('No messages yet. Start the discussion!'),
+                      );
                     }
 
                     return ListView(
@@ -311,7 +336,6 @@ class _BookingPageState extends State<BookingPage> {
                           timestamp: data['timestamp'] != null
                               ? data['timestamp'].toDate()
                               : DateTime.now(),
-
                         );
                       }).toList(),
                     );
@@ -319,16 +343,16 @@ class _BookingPageState extends State<BookingPage> {
                 ),
               ),
               if (_currentUser != null && appState.loggedIn)
-                Comments(
-                  addMessage: _addMessage,
-                )
+                Comments(addMessage: _addMessage)
               else
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
                     'Login to join the discussion.',
                     style: TextStyle(
-                        fontStyle: FontStyle.italic, color: Colors.grey[600]),
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
 
@@ -342,7 +366,9 @@ class _BookingPageState extends State<BookingPage> {
               const Divider(),
               ..._availableAddOns.keys.map((addOnName) {
                 return CheckboxListTile(
-                  title: Text('$addOnName (RM${_availableAddOns[addOnName]?.toStringAsFixed(2)})'),
+                  title: Text(
+                    '$addOnName (RM${_availableAddOns[addOnName]?.toStringAsFixed(2)})',
+                  ),
                   value: _selectedAddOns[addOnName],
                   onChanged: (bool? newValue) {
                     setState(() {
@@ -352,8 +378,8 @@ class _BookingPageState extends State<BookingPage> {
                   },
                 );
               }).toList(),
-              // --- End Add-ons Section ---
 
+              // --- End Add-ons Section ---
               const SizedBox(height: 24),
 
               const Text(
@@ -475,14 +501,18 @@ class _BookingPageState extends State<BookingPage> {
                             ? _confirmBooking
                             : () => context.go('/sign-in'),
                         icon: const Icon(Icons.check_circle_outline),
-                        label: Text(appState.loggedIn
-                            ? 'Confirm Booking'
-                            : 'Login to Confirm'),
+                        label: Text(
+                          appState.loggedIn
+                              ? 'Confirm Booking'
+                              : 'Login to Confirm',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 15),
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
                           textStyle: const TextStyle(fontSize: 18),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
