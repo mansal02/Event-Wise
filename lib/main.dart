@@ -12,12 +12,14 @@ import 'app_state.dart';
 import 'component/AppBar.dart';
 import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
+
 import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
 import 'page/booking_page.dart'; // From 'main' branch
 import 'page/booking_edit_page.dart'; // Import the BookingEditPage widget
 import 'page/event_hall_page.dart'; // From 'main' branch
 import 'page/home_page.dart'; // From 'main' branch
 import 'page/mybookings.dart'; // From 'main' branch
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -147,19 +149,18 @@ class _MyAppState extends State<MyApp> {
               },
             ),
 
-            GoRoute(
-              path: '/booking',
-              builder: (context, state) {
-                final EventHallPackage? package =
-                    state.extra as EventHallPackage?;
-                if (package == null) {
-                  return const Text(
-                    'Error: Event Hall Package details not found.',
-                  );
-                }
-                return BookingPage(eventHallPackage: package);
-              },
-            ),
+
+GoRoute(
+  path: '/booking',
+  builder: (context, state) {
+    final EventHallPackage? package = state.extra as EventHallPackage?;
+    if (package == null) {
+      return const Text('Error: Event Hall Package details not found.');
+    }
+    return BookingPage(eventHallPackage: package);
+  },
+),
+
             // Route from 'admin' branch
             GoRoute(
               path: '/admin', // New route for admin page
