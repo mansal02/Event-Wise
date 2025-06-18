@@ -72,12 +72,21 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
+<<<<<<< morning2
               final booking =
                   snapshot.data!.docs[index].data() as Map<String, dynamic>;
+=======
+              final doc = snapshot.data!.docs[index];
+              final booking = doc.data() as Map<String, dynamic>;
+>>>>>>> main
               final bookingDate = (booking['bookingDate'] as Timestamp?)
                   ?.toDate();
               final startDate = (booking['startDate'] as Timestamp?)?.toDate();
               final endDate = (booking['endDate'] as Timestamp?)?.toDate();
+<<<<<<< morning2
+=======
+              final status = (booking['status'] ?? '').toString().toLowerCase();
+>>>>>>> main
 
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -164,6 +173,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                       'Booked On: ${bookingDate != null ? DateFormat('yyyy-MM-dd HH:mm').format(bookingDate) : 'N/A'}',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
+<<<<<<< morning2
                   ],
                 ),
               );
@@ -174,3 +184,33 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
     );
   }
 }
+=======
+                    const SizedBox(height: 12),
+                    if (status == 'accepted')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '/edit-booking',
+                              extra: {'docId': doc.id, 'data': booking},
+                            );
+                          },
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Edit'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+>>>>>>> main
