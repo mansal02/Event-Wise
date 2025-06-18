@@ -1,7 +1,9 @@
 import 'package:event_wise_2/component/drawer.dart';
 import 'package:event_wise_2/details/event_hall_packages.dart';
+import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
+import 'package:event_wise_2/page/custom_register_page.dart';
+import 'package:event_wise_2/page/custom_sign_in_page.dart';
 import 'package:event_wise_2/page/profile_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,9 +14,8 @@ import 'app_state.dart';
 import 'component/AppBar.dart';
 import 'details/event_hall_package.dart';
 import 'firebase_options.dart';
-import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
-import 'page/booking_page.dart'; // From 'main' branch
 import 'page/booking_edit_page.dart'; // Import the BookingEditPage widget
+import 'page/booking_page.dart'; // From 'main' branch
 import 'page/event_hall_page.dart'; // From 'main' branch
 import 'page/home_page.dart'; // From 'main' branch
 import 'page/mybookings.dart'; // From 'main' branch
@@ -50,37 +51,9 @@ class _MyAppState extends State<MyApp> {
       routes: [
         GoRoute(
           path: '/sign-in',
+          // Replace FirebaseUI's SignInScreen with your CustomSignInPage
           builder: (context, state) {
-            return SignInScreen(
-              actions: [
-                ForgotPasswordAction((context, email) {
-                  final uri = Uri(
-                    path: '/sign-in/forgot-password',
-                    queryParameters: <String, String?>{'email': email},
-                  );
-                  context.push(uri.toString());
-                }),
-                AuthStateChangeAction((context, state) {
-                  User? user;
-                  if (state is SignedIn) {
-                    user = state.user;
-                  } else if (state is UserCreated) {
-                    user = state.credential.user;
-                  } else {
-                    user = null;
-                  }
-
-                  if (user != null) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Welcome!')));
-                      context.go('/');
-                    }
-                  }
-                }),
-              ],
-            );
+            return const CustomSignInPage();
           },
           routes: [
             GoRoute(
@@ -94,6 +67,13 @@ class _MyAppState extends State<MyApp> {
               },
             ),
           ],
+        ),
+
+        GoRoute(
+          path: '/register',
+          builder: (context, state) {
+            return const CustomRegisterPage();
+          },
         ),
         ShellRoute(
           builder: (context, state, child) {

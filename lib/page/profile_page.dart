@@ -1,7 +1,12 @@
 // profile_page.dart
+import 'dart:io'; // For File
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // Import for image picking
+
+// Removed: import 'package:firebase_storage/firebase_storage.dart'; // Removed for Firebase Storage
 
 import '../service/database.dart'; // Import the DatabaseService
 
@@ -17,10 +22,16 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  late TextEditingController _newPasswordController; // For new password
+  late TextEditingController _confirmPasswordController; // For confirming new password
+  
   bool _isPasswordVisible = false;
+  // Removed: bool _isUploadingImage = false; // No longer needed without upload
 
   User? _currentUser;
   final DatabaseService _databaseService = DatabaseService(); // Initialize DatabaseService
+  final ImagePicker _picker = ImagePicker(); // Image picker instance
+  File? _imageFile; // To store the picked image
 
   @override
   void initState() {
@@ -30,6 +41,8 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
     _nameController = TextEditingController(text: _currentUser?.displayName ?? '');
     _emailController = TextEditingController(text: _currentUser?.email ?? '');
     _phoneController = TextEditingController(text: _currentUser?.phoneNumber ?? '');
+    _newPasswordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
 
     // Fetch and display additional user data from Firestore if available
     _fetchAndSetUserProfile();
@@ -59,8 +72,28 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        // No more _isUploadingImage = true; as we are not uploading
+      });
+      // Removed call to _uploadImageToFirebase();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image selected! (Not uploaded without Firebase Storage)')),
+        );
+      }
+    }
+  }
+
+  // Removed: Future<void> _uploadImageToFirebase() async { ... } method as it's no longer used.
 
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
@@ -78,10 +111,18 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
         if (_nameController.text != _currentUser?.displayName) {
           await _currentUser?.updateDisplayName(_nameController.text);
           firestoreUpdateData['name'] = _nameController.text;
+          firestoreUpdateData['originalName'] = _nameController.text; // Update originalName if display name changes
         }
 
         // Update Email in Firebase Auth
         if (_emailController.text != _currentUser?.email) {
+          // Check if the new email is different and if it's not already verified
+          if (_currentUser?.emailVerified == true && _emailController.text != _currentUser?.email) {
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please update your email via Firebase Authentication if it\'s already verified.')),
+            );
+            return; // Exit if email is verified and user tries to change it via this field
+          }
           await _currentUser?.verifyBeforeUpdateEmail(_emailController.text);
           firestoreUpdateData['email'] = _emailController.text; // Update email in Firestore as well
           if (mounted) {
@@ -141,6 +182,60 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
     }
   }
 
+  Future<void> _changePassword() async {
+    if (_formKey.currentState!.validate()) {
+      final newPassword = _newPasswordController.text;
+      final confirmPassword = _confirmPasswordController.text;
+
+      if (newPassword.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a new password.')),
+        );
+        return;
+      }
+      if (newPassword != confirmPassword) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New password and confirm password do not match.')),
+        );
+        return;
+      }
+
+      try {
+        if (_currentUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not logged in.')),
+          );
+          return;
+        }
+
+        await _currentUser?.updatePassword(newPassword);
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password updated successfully!')),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        String message = 'Failed to change password.';
+        if (e.code == 'requires-recent-login') {
+          message = 'This operation is sensitive and requires recent authentication. Please log out and log in again, then try changing your password.';
+        } else {
+          message = e.message ?? message;
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('An unexpected error occurred: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _currentUser = FirebaseAuth.instance.currentUser;
@@ -165,20 +260,24 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Image picker functionality coming soon!')),
-                  );
-                },
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: _currentUser?.photoURL != null
-                      ? NetworkImage(_currentUser!.photoURL!)
-                      : null,
-                  child: _currentUser?.photoURL == null
-                      ? Icon(Icons.person, size: 60, color: Colors.grey.shade600)
-                      : null,
+                onTap: _pickImage, // No need to check _isUploadingImage as it's removed
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!) as ImageProvider<Object>? // Show picked image
+                          : (_currentUser?.photoURL != null
+                              ? NetworkImage(_currentUser!.photoURL!)
+                              : null),
+                      child: (_imageFile == null && _currentUser?.photoURL == null)
+                          ? Icon(Icons.person, size: 60, color: Colors.grey.shade600)
+                          : null,
+                    ),
+                    // Removed: if (_isUploadingImage) const CircularProgressIndicator(),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -254,13 +353,14 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Password:',
+                'Change Password:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               TextFormField(
+                controller: _newPasswordController,
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: '********',
+                  labelText: 'New Password',
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -274,28 +374,44 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.lock),
                 ),
-                enabled: false,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && value.length < 6) {
+                    return 'Password must be at least 6 characters long.';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Note: For security reasons, your password cannot be displayed unmasked. You can only change it.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: 'Confirm New Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && value != _newPasswordController.text) {
+                    return 'Passwords do not match.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ForgotPasswordScreen(
-                        email: _currentUser?.email,
-                      ),
-                    ),
-                  );
-                },
+                onPressed: _changePassword,
                 icon: const Icon(Icons.lock_reset),
-                label: const Text('Change Password'),
+                label: const Text('Set New Password'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
                   backgroundColor: Colors.orange,

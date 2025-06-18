@@ -34,14 +34,12 @@ class _BookingPageState extends State<BookingPage> {
 
   // Define ALL possible add-ons with their prices
   final Map<String, double> _allPossibleAddOns = {
-
     'Catering': 1500.0,
     'Emcee': 500.0,
     'DJ': 800.0,
     'Sound System': 700.0,
     'Lighting System': 600.0,
   };
-
 
   // Define which add-ons are allowed for each package ID
   // This is the core logic based on your requirements
@@ -58,7 +56,6 @@ class _BookingPageState extends State<BookingPage> {
   // This map will store the selected state (true/false) for only the add-ons allowed for the current package
   final Map<String, bool> _selectedAddOns = {};
 
-
   // State variable for dynamically calculated total price
   double _currentCalculatedTotalPrice = 0.0;
 
@@ -72,7 +69,6 @@ class _BookingPageState extends State<BookingPage> {
           _currentUser = user;
         });
         if (user != null) {
-
           _databaseService.saveUser(user, user.displayName, user.phoneNumber, 'user');
         }
       }
@@ -98,7 +94,6 @@ class _BookingPageState extends State<BookingPage> {
         _selectedAddOns[addOnName] = false; // Initialize all allowed add-ons as unselected
       }
     }
-
   }
 
   @override
@@ -113,7 +108,6 @@ class _BookingPageState extends State<BookingPage> {
     _personsController.dispose();
     super.dispose();
   }
-
 
   void _updateTotalPrice() {
     double basePrice = widget.eventHallPackage.price;
@@ -131,7 +125,6 @@ class _BookingPageState extends State<BookingPage> {
     });
 
     double perPersonCost = persons * 4.0;
-
 
     setState(() {
       _currentCalculatedTotalPrice = packageCost + addOnCost + perPersonCost;
@@ -157,7 +150,6 @@ class _BookingPageState extends State<BookingPage> {
           _daysController.text = '1'; // Default to 1 day if only start date selected
         }
         _updateTotalPrice();
-
       });
     }
   }
@@ -166,9 +158,7 @@ class _BookingPageState extends State<BookingPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
-
       firstDate: _startDate ?? DateTime.now(),
-
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _endDate) {
@@ -181,7 +171,6 @@ class _BookingPageState extends State<BookingPage> {
           _daysController.text = calculatedDays.toString();
         }
         _updateTotalPrice();
-
       });
     }
   }
@@ -199,7 +188,6 @@ class _BookingPageState extends State<BookingPage> {
         return;
       }
 
-
       int days = int.tryParse(_daysController.text) ?? 1;
       int persons = int.tryParse(_personsController.text) ?? 0;
 
@@ -209,7 +197,6 @@ class _BookingPageState extends State<BookingPage> {
         'userId': _currentUser!.uid,
         'eventHallPackageId': widget.eventHallPackage.id,
         'eventName': widget.eventHallPackage.name,
-
         'eventPrice': widget.eventHallPackage.price,
         'details': 'Booking for ${widget.eventHallPackage.name}',
         'visitorPax': persons,
@@ -218,7 +205,6 @@ class _BookingPageState extends State<BookingPage> {
         'days': days,
         'addOns': selectedAddOnNames, // Save only the selected add-on names
         'totalPrice': _currentCalculatedTotalPrice,
-
         'bookingDate': FieldValue.serverTimestamp(),
         'status': 'pending',
       };
@@ -233,11 +219,9 @@ class _BookingPageState extends State<BookingPage> {
         print('Booking confirmed and saved to Firestore!');
       } catch (e) {
         if (mounted) {
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to save booking: $e')),
           );
-
         }
         print('Error saving booking: $e');
       }
@@ -264,12 +248,10 @@ class _BookingPageState extends State<BookingPage> {
         .doc(discussionId)
         .collection('messages')
         .add({
-
       'message': message,
       'sender': user.displayName ?? user.email ?? 'Anonymous',
       'timestamp': FieldValue.serverTimestamp(),
     });
-
   }
 
   @override
@@ -292,23 +274,15 @@ class _BookingPageState extends State<BookingPage> {
                 fit: BoxFit.cover,
               ),
               const SizedBox(height: 16),
-
               Text(
                 widget.eventHallPackage.name,
-
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-
               ),
               const SizedBox(height: 8),
-
               Text(widget.eventHallPackage.description),
               const SizedBox(height: 8),
-
-
               Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'),
-
               const SizedBox(height: 16),
-
               const Text(
                 'Reviews and Discussion',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -344,7 +318,6 @@ class _BookingPageState extends State<BookingPage> {
                         return MessageCard(
                           message: data['message'],
                           sender: data['sender'],
-
                           timestamp: data['timestamp'] != null
                               ? data['timestamp'].toDate()
                               : DateTime.now(),
@@ -354,24 +327,14 @@ class _BookingPageState extends State<BookingPage> {
                   },
                 ),
               ),
-              if (_currentUser != null && appState.loggedIn)
-                Comments(addMessage: _addMessage)
-              else
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'Login to join the discussion.',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-
+              // Always display the Comments widget, but control its functionality internally
+              Comments(
+                addMessage: _addMessage,
+                canComment: _currentUser != null && appState.loggedIn, // This looks correct
+              ),
               const SizedBox(height: 24),
 
               // --- Add-ons Section ---
-
               // Only display this section if there are allowed add-ons for the current package
               if (_currentPackageAllowedAddOns.isNotEmpty) ...[
                 const Text(
@@ -394,7 +357,6 @@ class _BookingPageState extends State<BookingPage> {
                 const SizedBox(height: 24),
               ],
               // --- End Add-ons Section ---
-
 
               const Text(
                 'Booking Details',
@@ -454,7 +416,6 @@ class _BookingPageState extends State<BookingPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _daysController,
-
                             readOnly: true,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -463,7 +424,6 @@ class _BookingPageState extends State<BookingPage> {
                               border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.timelapse),
                             ),
-
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -492,8 +452,6 @@ class _BookingPageState extends State<BookingPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
@@ -508,9 +466,7 @@ class _BookingPageState extends State<BookingPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     Center(
                       child: ElevatedButton.icon(
                         onPressed: appState.loggedIn
