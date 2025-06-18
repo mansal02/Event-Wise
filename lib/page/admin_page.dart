@@ -126,7 +126,9 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                       Expanded(
                                         child: Text(
                                           '  - ${booking['eventHallName'] ?? 'N/A'} '
+
                                           '(Package: ${booking['eventName'] ??   'N/A'})\n'
+
                                           '    Booked: ${booking['bookingDate'] != null ? (booking['bookingDate'] as Timestamp).toDate().toLocal().toString().split('.')[0] : 'N/A'}\n'
                                           '    Event: ${booking['eventDate'] != null ? (booking['eventDate'] as Timestamp).toDate().toLocal().toString().split('.')[0] : 'N/A'} '
                                           '${booking['eventTime'] ?? 'N/A'}',
@@ -364,6 +366,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     final TextEditingController eventNameController = TextEditingController(text: currentBookingData['eventName']);
     final TextEditingController eventDateController = TextEditingController(text: currentBookingData['eventDate'] != null
       ? (currentBookingData['eventDate'] as Timestamp).toDate().toLocal().toString().split(' ')[0]: '');
+
     final TextEditingController eventTimeController = TextEditingController(text: currentBookingData['eventTime']);
 
     // Ensure selectedStatus is one of the valid options, otherwise default to 'Pending'
@@ -387,7 +390,9 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                       enabled: false, // Made uneditable
                     ),
                     TextField(
+
                       controller: eventNameController,
+
                       decoration: const InputDecoration(labelText: 'Package Name'),
                       enabled: false, // Made uneditable
                     ),
@@ -460,7 +465,9 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
                 final updatedData = {
                   'eventHallName': eventHallNameController.text.trim(),
+
                   'packageName': eventNameController.text.trim(),
+
                   'eventDate': eventDateTimestamp,
                   'eventTime': eventTimeController.text.trim(),
                   'status': selectedStatus, // Use the selected status from Dropdown
@@ -508,7 +515,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
             ),
           ],
         );
-        
+
       },
     );
   }
