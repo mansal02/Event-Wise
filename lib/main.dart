@@ -15,6 +15,14 @@ import 'firebase_options.dart';
 
 import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
 import 'page/booking_page.dart'; // From 'main' branch
+import 'page/event_hall_page.dart'; // From 'main' branch
+import 'page/home_page.dart'; // From 'main' branch
+import 'page/mybookings.dart'; // From 'main' branch
+
+
+
+import 'package:event_wise_2/page/admin_page.dart'; // From 'admin' branch
+import 'page/booking_page.dart'; // From 'main' branch
 import 'page/booking_edit_page.dart'; // Import the BookingEditPage widget
 import 'page/event_hall_page.dart'; // From 'main' branch
 import 'page/home_page.dart'; // From 'main' branch
@@ -139,6 +147,7 @@ class _MyAppState extends State<MyApp> {
               },
             ),
             GoRoute(
+
               path: '/edit-booking',
               builder: (context, state) {
                 final extra = state.extra as Map<String, dynamic>;
@@ -165,10 +174,12 @@ GoRoute(
             GoRoute(
               path: '/admin', // New route for admin page
               redirect: (context, state) {
+
                 final appState = Provider.of<ApplicationState>(
                   context,
                   listen: false,
                 );
+
                 // In a real app, you would also check for admin role:
                 if (!appState.loggedIn || !appState.isAdmin) {
                   return '/sign-in';
