@@ -4,23 +4,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Public getter to access the Firestore instance
+  FirebaseFirestore get firestore => _firestore;
+
   // --- User Management Methods ---
 
   /// Creates or updates a user's profile document in Firestore.
   /// This should be called after a user signs up or logs in, to ensure their profile
   /// data (name, role, phone number) is synchronized with Firestore.
   Future<void> saveUser(User user, String? name, String? phoneNumber, String role) async {
+    // Convert username to lowercase for consistent storage and lookup
+    final String lowerCaseName = name?.toLowerCase() ?? user.displayName?.toLowerCase() ?? 'anonymous user';
+
     final userDocRef = _firestore.collection('users').doc(user.uid);
     try {
       await userDocRef.set({
-        'name': name ?? user.displayName ?? 'Anonymous User',
+        'name': lowerCaseName, // Store lowercase name
+        'originalName': name, // Store original casing if needed for display
         'email': user.email,
         'phoneNumber': phoneNumber ?? user.phoneNumber ?? '',
         'role': role, // e.g., 'user', 'admin'
         'createdAt': FieldValue.serverTimestamp(), // Set only on creation
         'lastLoginAt': FieldValue.serverTimestamp(), // Update on every login/save
       }, SetOptions(merge: true)); // Use merge: true to update existing fields without overwriting the whole document
-      print('User data saved/updated for: ${user.uid}');
+      print('User data saved/updated for: ${user.uid} with username: $lowerCaseName');
     } catch (e) {
       print("Error saving user data: $e");
     }
@@ -37,6 +44,23 @@ class DatabaseService {
     }
   }
 
+  /// Checks if a username already exists in the 'users' collection.
+  Future<bool> isUsernameTaken(String username) async {
+    // Convert username to lowercase for consistent lookup
+    final String lowerCaseUsername = username.toLowerCase();
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('name', isEqualTo: lowerCaseUsername) // Query using lowercase
+          .limit(1) // Limit to 1 result for efficiency
+          .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Error checking username existence: $e");
+      return false; // Assume not taken on error to allow user to proceed or handle differently
+    }
+  }
+
   /// Updates specific fields in a user's profile document.
   Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
     try {
@@ -44,6 +68,38 @@ class DatabaseService {
       print('User data updated for: $userId');
     } catch (e) {
       print("Error updating user data: $e");
+    }
+  }
+
+  // --- Admin Management Methods ---
+
+  /// Fetches all users who have the 'admin' role.
+  /// This can be used to display a list of administrators in an admin panel.
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAdmins() {
+    return _firestore.collection('users')
+        .where('role', isEqualTo: 'admin')
+        .snapshots();
+  }
+
+  /// Grants the 'admin' role to a specific user.
+  /// Ensure you have proper authentication and authorization checks before calling this.
+  Future<void> grantAdminRole(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({'role': 'admin'});
+      print('User $userId granted admin role.');
+    } catch (e) {
+      print("Error granting admin role to user $userId: $e");
+    }
+  }
+
+  /// Revokes the 'admin' role from a specific user, setting their role to 'user'.
+  /// You might adjust the default role ('user') based on your application's needs.
+  Future<void> revokeAdminRole(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({'role': 'user'});
+      print('User $userId revoked admin role.');
+    } catch (e) {
+      print("Error revoking admin role from user $userId: $e");
     }
   }
 
