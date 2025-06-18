@@ -1,3 +1,4 @@
+// booking_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -41,15 +42,7 @@ class _BookingPageState extends State<BookingPage> {
     'Lighting System': 600.0,
   };
 
-  // Define which add-ons are allowed for each package ID
-  // This is the core logic based on your requirements
-  final Map<String, List<String>> _packageAddOnMapping = {
-    'EH-a-1': ['Catering', 'Emcee', 'DJ', 'Sound System', 'Lighting System'], // Empty Hall
-    'EH-b-1': ['Sound System', 'DJ', 'Catering'], // Wedding Package
-    'EH-c-1': ['Catering', 'Lighting System', 'DJ'], // Corporate Package
-    'EH-d-1': ['Catering'], // Party Package
-    'EH-e-1': ['Catering', 'Emcee', 'DJ', 'Sound System', 'Lighting System'], // Custom Package
-  };
+  // Removed _packageAddOnMapping as all add-ons are now available for all packages
 
   // This map will store only the add-ons allowed for the current package, with their prices
   late Map<String, double> _currentPackageAllowedAddOns;
@@ -69,7 +62,12 @@ class _BookingPageState extends State<BookingPage> {
           _currentUser = user;
         });
         if (user != null) {
-          _databaseService.saveUser(user, user.displayName, user.phoneNumber, 'user');
+          _databaseService.saveUser(
+            user,
+            user.displayName,
+            user.phoneNumber,
+            'user',
+          );
         }
       }
     });
@@ -80,19 +78,15 @@ class _BookingPageState extends State<BookingPage> {
     _updateTotalPrice(); // Initial calculation
   }
 
-  // New method to set up add-ons based on the current event package
+  // Modified method to set up add-ons, now all add-ons are available
   void _initializeAddOnsForCurrentPackage() {
     _currentPackageAllowedAddOns = {};
     _selectedAddOns.clear(); // Clear any previous selections
 
-    String packageId = widget.eventHallPackage.id;
-    List<String> allowedNames = _packageAddOnMapping[packageId] ?? [];
-
-    for (String addOnName in allowedNames) {
-      if (_allPossibleAddOns.containsKey(addOnName)) {
-        _currentPackageAllowedAddOns[addOnName] = _allPossibleAddOns[addOnName]!;
-        _selectedAddOns[addOnName] = false; // Initialize all allowed add-ons as unselected
-      }
+    // Iterate through all possible add-ons and make them available
+    for (String addOnName in _allPossibleAddOns.keys) {
+      _currentPackageAllowedAddOns[addOnName] = _allPossibleAddOns[addOnName]!;
+      _selectedAddOns[addOnName] = false; // Initialize all as unselected
     }
   }
 
@@ -100,7 +94,6 @@ class _BookingPageState extends State<BookingPage> {
   void dispose() {
     _startDateController.dispose();
     _endDateController.dispose();
-    // _daysController.removeListener(_updateTotalPrice); // Not needed as it's readOnly and updated via date pickers
     _daysController.dispose();
 
     _personsController.removeListener(_updateTotalPrice);
@@ -119,7 +112,6 @@ class _BookingPageState extends State<BookingPage> {
     double addOnCost = 0.0;
     _selectedAddOns.forEach((name, isSelected) {
       if (isSelected) {
-        // Use the price from _allPossibleAddOns for consistency and safety
         addOnCost += _allPossibleAddOns[name] ?? 0.0;
       }
     });
@@ -142,12 +134,17 @@ class _BookingPageState extends State<BookingPage> {
       setState(() {
         _startDate = picked;
 
-        _startDateController.text = DateFormat('yyyy-MM-dd').format(_startDate!);
-        if (_endDate != null && _startDate != null && _startDate!.isBefore(_endDate!)) {
+        _startDateController.text = DateFormat(
+          'yyyy-MM-dd',
+        ).format(_startDate!);
+        if (_endDate != null &&
+            _startDate != null &&
+            _startDate!.isBefore(_endDate!)) {
           int calculatedDays = _endDate!.difference(_startDate!).inDays + 1;
           _daysController.text = calculatedDays.toString();
         } else if (_startDate != null && _endDate == null) {
-          _daysController.text = '1'; // Default to 1 day if only start date selected
+          _daysController.text =
+              '1'; // Default to 1 day if only start date selected
         }
         _updateTotalPrice();
       });
@@ -191,7 +188,9 @@ class _BookingPageState extends State<BookingPage> {
       int days = int.tryParse(_daysController.text) ?? 1;
       int persons = int.tryParse(_personsController.text) ?? 0;
 
-      List<String> selectedAddOnNames = _selectedAddOns.keys.where((name) => _selectedAddOns[name]!).toList();
+      List<String> selectedAddOnNames = _selectedAddOns.keys
+          .where((name) => _selectedAddOns[name]!)
+          .toList();
 
       Map<String, dynamic> bookingData = {
         'userId': _currentUser!.uid,
@@ -200,7 +199,9 @@ class _BookingPageState extends State<BookingPage> {
         'eventPrice': widget.eventHallPackage.price,
         'details': 'Booking for ${widget.eventHallPackage.name}',
         'visitorPax': persons,
-        'startDate': _startDate != null ? Timestamp.fromDate(_startDate!) : null,
+        'startDate': _startDate != null
+            ? Timestamp.fromDate(_startDate!)
+            : null,
         'endDate': _endDate != null ? Timestamp.fromDate(_endDate!) : null,
         'days': days,
         'addOns': selectedAddOnNames, // Save only the selected add-on names
@@ -219,9 +220,9 @@ class _BookingPageState extends State<BookingPage> {
         print('Booking confirmed and saved to Firestore!');
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save booking: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to save booking: $e')));
         }
         print('Error saving booking: $e');
       }
@@ -248,10 +249,10 @@ class _BookingPageState extends State<BookingPage> {
         .doc(discussionId)
         .collection('messages')
         .add({
-      'message': message,
-      'sender': user.displayName ?? user.email ?? 'Anonymous',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'message': message,
+          'sender': user.displayName ?? user.email ?? 'Anonymous',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
@@ -276,12 +277,17 @@ class _BookingPageState extends State<BookingPage> {
               const SizedBox(height: 16),
               Text(
                 widget.eventHallPackage.name,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(widget.eventHallPackage.description),
               const SizedBox(height: 8),
-              Text('Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}'),
+              Text(
+                'Base Price Per Day: RM${widget.eventHallPackage.price.toStringAsFixed(2)}',
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Reviews and Discussion',
@@ -327,37 +333,35 @@ class _BookingPageState extends State<BookingPage> {
                   },
                 ),
               ),
-              // Always display the Comments widget, but control its functionality internally
               Comments(
                 addMessage: _addMessage,
-                canComment: _currentUser != null && appState.loggedIn, // This looks correct
+                canComment: _currentUser != null && appState.loggedIn,
               ),
               const SizedBox(height: 24),
 
               // --- Add-ons Section ---
-              // Only display this section if there are allowed add-ons for the current package
-              if (_currentPackageAllowedAddOns.isNotEmpty) ...[
-                const Text(
-                  'Event Add-ons',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const Divider(),
-                ..._currentPackageAllowedAddOns.keys.map((addOnName) {
-                  return CheckboxListTile(
-                    title: Text('$addOnName (RM${_currentPackageAllowedAddOns[addOnName]?.toStringAsFixed(2)})'),
-                    value: _selectedAddOns[addOnName],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        _selectedAddOns[addOnName] = newValue!;
-                        _updateTotalPrice(); // Update total price when add-ons change
-                      });
-                    },
-                  );
-                }).toList(),
-                const SizedBox(height: 24),
-              ],
-              // --- End Add-ons Section ---
+              const Text(
+                'Event Add-ons',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Divider(),
+              ..._currentPackageAllowedAddOns.keys.map((addOnName) {
+                return CheckboxListTile(
+                  title: Text(
+                    '$addOnName (RM${_currentPackageAllowedAddOns[addOnName]?.toStringAsFixed(2)})',
+                  ),
+                  value: _selectedAddOns[addOnName],
+                  onChanged: (bool? newValue) {
+                    setState(() {
+                      _selectedAddOns[addOnName] = newValue!;
+                      _updateTotalPrice(); // Update total price when add-ons change
+                    });
+                  },
+                );
+              }).toList(),
+              const SizedBox(height: 24),
 
+              // --- End Add-ons Section ---
               const Text(
                 'Booking Details',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
