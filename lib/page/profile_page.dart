@@ -1,12 +1,10 @@
-// profile_page.dart
-import 'dart:io'; // For File
+import 'dart:io'; 
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Import for image picking
+import 'package:image_picker/image_picker.dart'; 
 
-// Removed: import 'package:firebase_storage/firebase_storage.dart'; // Removed for Firebase Storage
 
 import '../service/database.dart'; // Import the DatabaseService
 
@@ -414,7 +412,7 @@ class _CustomProfilePageState extends State<CustomProfilePage> {
                 label: const Text('Set New Password'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
-                  backgroundColor: Colors.orange,
+                  backgroundColor: const Color.fromARGB(255, 110, 0, 153),
                 ),
               ),
               if (!_currentUser!.emailVerified)

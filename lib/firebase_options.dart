@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '632418318888',
     projectId: 'eventwise-cb24f',
     authDomain: 'eventwise-cb24f.firebaseapp.com',
+    databaseURL: 'https://eventwise-cb24f-default-rtdb.firebaseio.com',
     storageBucket: 'eventwise-cb24f.firebasestorage.app',
     measurementId: 'G-4H3FDZBPYN',
   );
@@ -55,6 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:632418318888:android:6dc481155b9fd5ab52131d',
     messagingSenderId: '632418318888',
     projectId: 'eventwise-cb24f',
+    databaseURL: 'https://eventwise-cb24f-default-rtdb.firebaseio.com',
     storageBucket: 'eventwise-cb24f.firebasestorage.app',
   );
 
@@ -63,6 +65,7 @@ class DefaultFirebaseOptions {
     appId: '1:632418318888:ios:2905b553e960a18a52131d',
     messagingSenderId: '632418318888',
     projectId: 'eventwise-cb24f',
+    databaseURL: 'https://eventwise-cb24f-default-rtdb.firebaseio.com',
     storageBucket: 'eventwise-cb24f.firebasestorage.app',
     iosBundleId: 'com.example.eventWise2',
   );
@@ -72,6 +75,7 @@ class DefaultFirebaseOptions {
     appId: '1:632418318888:ios:2905b553e960a18a52131d',
     messagingSenderId: '632418318888',
     projectId: 'eventwise-cb24f',
+    databaseURL: 'https://eventwise-cb24f-default-rtdb.firebaseio.com',
     storageBucket: 'eventwise-cb24f.firebasestorage.app',
     iosBundleId: 'com.example.eventWise2',
   );
@@ -82,6 +86,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '632418318888',
     projectId: 'eventwise-cb24f',
     authDomain: 'eventwise-cb24f.firebaseapp.com',
+    databaseURL: 'https://eventwise-cb24f-default-rtdb.firebaseio.com',
     storageBucket: 'eventwise-cb24f.firebasestorage.app',
     measurementId: 'G-YF4KRVSHDQ',
   );

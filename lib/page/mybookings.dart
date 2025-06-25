@@ -72,24 +72,22 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final booking =
-                  snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              final bookingDoc = snapshot.data!.docs[index];
+              final booking = bookingDoc.data() as Map<String, dynamic>;
+              final bookingId = bookingDoc.id;
               final bookingDate = (booking['bookingDate'] as Timestamp?)
                   ?.toDate();
               final startDate = (booking['startDate'] as Timestamp?)?.toDate();
               final endDate = (booking['endDate'] as Timestamp?)?.toDate();
               final bookingStatus =
-                  booking['status'] as String?; // Get the booking status
+                  booking['status'] as String?;
 
-              // Safely handle 'addOns' which could be a List or a Map based on booking data
               final dynamic addOnsData = booking['addOns'];
               List<String> displayedAddOns = [];
 
               if (addOnsData is List) {
-                // New format: List of add-on names
                 displayedAddOns = List<String>.from(addOnsData);
               } else if (addOnsData is Map<String, dynamic>) {
-                // Old format (if any): Map of add-on name to price
                 displayedAddOns = addOnsData.entries
                     .map((entry) => '${entry.key}: RM ${entry.value}')
                     .toList();
@@ -115,8 +113,6 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // --- Conditional Edit Button START ---
-                          // Only show the Edit button if the booking status is 'Accepted'
                           if (bookingStatus == 'Accepted')
                             TextButton.icon(
                               icon: const Icon(Icons.edit, size: 20),
@@ -128,13 +124,12 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                                 context.go(
                                   '/edit-booking',
                                   extra: {
-                                    'docId': snapshot.data!.docs[index].id,
+                                    'docId': bookingId,
                                     'data': booking,
                                   },
                                 );
                               },
                             ),
-                          // --- Conditional Edit Button END ---
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -156,12 +151,34 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                           'Selected Add-Ons:',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        // Iterate through the safely prepared list
                         ...displayedAddOns
                             .map((item) => Text('- $item'))
                             .toList(),
                       ],
                       Text('Status: ${booking['status'] ?? 'N/A'}'),
+                      if (bookingStatus == 'Accepted')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              context.go(
+                                '/payment',
+                                extra: {
+                                  'bookingId': bookingId,
+                                  'bookingData': booking,
+                                },
+                              );
+                            },
+                            child: const Text('Pay Now'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "632418318888",
+    "firebase_url": "https://eventwise-cb24f-default-rtdb.firebaseio.com",
     "project_id": "eventwise-cb24f",
     "storage_bucket": "eventwise-cb24f.firebasestorage.app"
   },
